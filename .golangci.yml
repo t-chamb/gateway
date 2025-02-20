@@ -1,47 +1,75 @@
 run:
-  timeout: 5m
+  timeout: 10m
   allow-parallel-runners: true
+  build-tags:
+    - containers_image_openpgp
+    - containers_image_storage_stub
 
-issues:
-  # don't skip warning about doc comments
-  # don't exclude the default set of lint
-  exclude-use-default: false
-  # restore some of the defaults
-  # (fill in the rest as needed)
-  exclude-rules:
-    - path: "api/*"
-      linters:
-        - lll
-    - path: "internal/*"
-      linters:
-        - dupl
-        - lll
 linters:
   disable-all: true
+  # Look at this for details: https://golangci-lint.run/usage/linters/
   enable:
-    - dupl
+    # enabled by default
+    - typecheck
     - errcheck
-    - copyloopvar
-    - ginkgolinter
-    - goconst
-    - gocyclo
-    - gofmt
-    - goimports
     - gosimple
     - govet
     - ineffassign
-    - lll
-    - misspell
-    - nakedret
-    - prealloc
-    - revive
     - staticcheck
-    - typecheck
+    - unused
+    # disabled by default
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - copyloopvar
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - goconst
+    - err113
+    - gofmt
+    - goimports
+    - gosec
+    - loggercheck
+    - makezero
+    - misspell
+    - musttag
+    - nilerr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - prealloc
+    - predeclared
+    - promlinter
+    - reassign
+    - revive
     - unconvert
     - unparam
-    - unused
+    - usestdlibvars
+    - usetesting
+    - whitespace
+    - wrapcheck
 
 linters-settings:
-  revive:
-    rules:
-      - name: comment-spacings
+  exhaustive:
+    check:
+      - switch
+      - map
+  reassign:
+    patterns:
+      - ".*"
+
+# TODO remove after controller is used
+issues:
+  exclude-files:
+    - test
+    - internal

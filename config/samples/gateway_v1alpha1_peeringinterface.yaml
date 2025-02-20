@@ -1,9 +1,0 @@
-apiVersion: gateway.githedgehog.com/v1alpha1
-kind: PeeringInterface
-metadata:
-  labels:
-    app.kubernetes.io/name: gateway
-    app.kubernetes.io/managed-by: kustomize
-  name: peeringinterface-sample
-spec:
-  # TODO(user): Add fields here
