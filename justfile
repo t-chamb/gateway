@@ -54,19 +54,19 @@ _helm-gateway-api: _kustomize _helm _kube_gen
   {{helm}} package config/helm/gateway-api --destination config/helm --version {{version}}
   {{helm}} lint config/helm/gateway-api-{{version}}.tgz
 
-_helm-gateway: _kustomize _helm _helmify _kube_gen
-  @rm config/helm/gateway-v*.tgz || true
-  @rm config/helm/gateway/templates/*.yaml config/helm/gateway/values.yaml || true
-  {{kustomize}} build config/default | {{helmify}} config/helm/gateway
-  {{helm}} package config/helm/gateway --destination config/helm --version {{version}}
-  {{helm}} lint config/helm/gateway-{{version}}.tgz
+_helm-gateway-ctrl: _kustomize _helm _helmify _kube_gen
+  @rm config/helm/gateway-ctrl-v*.tgz || true
+  @rm config/helm/gateway-ctrl/templates/*.yaml config/helm/gateway-ctrl/values.yaml || true
+  {{kustomize}} build config/default | {{helmify}} config/helm/gateway-ctrl
+  {{helm}} package config/helm/gateway-ctrl --destination config/helm --version {{version}}
+  {{helm}} lint config/helm/gateway-ctrl-{{version}}.tgz
 
 # Build all K8s artifacts (images and charts)
-kube-build: build (_docker-build "gateway-ctrl") _helm-gateway-api _helm-gateway && version
+kube-build: build (_docker-build "gateway-ctrl") _helm-gateway-api _helm-gateway-ctrl && version
   # Docker images and Helm charts built
 
 # Push all K8s artifacts (images and charts)
-kube-push: kube-build (_helm-push "gateway-api") (_kube-push "gateway") && version
+kube-push: kube-build (_helm-push "gateway-api") (_kube-push "gateway-ctrl") && version
   # Docker images and Helm charts pushed
 
 # Push all K8s artifacts (images and charts) and binaries

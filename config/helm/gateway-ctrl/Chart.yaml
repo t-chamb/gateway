@@ -1,5 +1,5 @@
 apiVersion: v2
-name: gateway
+name: gateway-ctrl
 description: Hedgehog Gateway Controller
 
 # A chart can be either an 'application' or a 'library' chart.
