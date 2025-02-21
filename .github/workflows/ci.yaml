@@ -1,0 +1,70 @@
+name: CI
+
+concurrency:
+  group: ci-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+      - release/*
+    tags:
+      - "v*"
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+  pull_request:
+  schedule:
+    - cron: "0 10 * * *" # ~2am PST
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
+        required: false
+        default: false
+
+jobs:
+  test:
+    runs-on: lab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Setup Just
+        uses: extractions/setup-just@v2
+
+      - name: Lint and generate code
+        run: |
+          just --timestamp lint-gha gen _lint
+
+      - name: More Go lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          # keep in sync with hack/tools.just
+          version: v1.64.2
+
+      - name: Run tests
+        run: |
+          just --timestamp test
+
+      # Don't remove it! We shouldn't allow CI to pass if there are any changes not committed after running gen/lint/test
+      - name: Fail on dirty
+        run: |
+          git status --short
+          git diff --quiet
+
+      - name: Setup tmate session for debug
+        if: ${{ failure() && github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true
