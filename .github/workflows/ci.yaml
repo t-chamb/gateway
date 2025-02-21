@@ -104,3 +104,39 @@ jobs:
         timeout-minutes: 30
         with:
           limit-access-to-actor: true
+
+  publish-master:
+    runs-on: lab
+    if: github.event.ref == 'refs/heads/master' && github.event_name == 'push'
+    needs:
+      - test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Images, Helm charts and Bins for master
+        run: |
+          just --timestamp oci_repo=ghcr.io version_extra=-master push
+
+      - name: Setup tmate session for debug
+        if: ${{ failure() && github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true

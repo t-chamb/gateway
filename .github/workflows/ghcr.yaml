@@ -1,0 +1,34 @@
+name: GHCR Cleanup
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # ~2am PST
+
+jobs:
+  ghcr-cleanup:
+    runs-on: lab
+
+    strategy:
+      matrix:
+        package:
+          - gateway/gateway-ctrl
+          - gateway/charts/gateway-api
+          - gateway/charts/gateway-ctrl
+
+    steps:
+      - name: ghcp-prune
+        uses: vlaurin/action-ghcr-prune@v0.6.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          organization: githedgehog
+          container: ${{ matrix.package }}
+          keep-younger-than: 14 # days
+          keep-last: 5
+          prune-tags-regexes: |
+            ^master-
+            ^pr-
+            -master$
+            -pr$
+            -master-
+            -pr-
+            -dirty-
