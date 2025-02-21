@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   commitlint:
-    runs-on: ubuntu-latest
+    runs-on: lab
 
     steps:
       - name: Checkout repository
