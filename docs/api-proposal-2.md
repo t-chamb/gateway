@@ -86,12 +86,21 @@ VPC: Vpc-2 (existing definition)
 
 // at a distinct scope (Fabric)
 Virtual links:
+  virtual-link: foo
     left: 
       vpc: Vpc-1
       interface: PifX
     Right: 
       vpc: VPC-2
       interface: PifY
+
+  virtual-link: bar
+     left: ..
+     right: ..
+
+  virtual-link: baz
+     left: ..
+     right: ..
 ```
 
 
