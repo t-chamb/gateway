@@ -54,7 +54,7 @@ spec:
             dstPort: 443
   vpc2:
     ips:
-      - cidr: 10.2.1.0/24
+      - cidr: 10.2.1.1/32
     ingress:
       - allow:
           stateless: true
