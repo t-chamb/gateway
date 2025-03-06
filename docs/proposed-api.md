@@ -31,6 +31,127 @@ be based on flow state.  How does this interact with other configuration?
 
 ## Use Cases
 
+### VPC1 <> VPC2 with overlapping subnets
+
+```yaml
+apiVersion: gateway.githedgehog.com/v1alpha1
+kind: Peering
+metadata:
+  name: vpc-1--vpc-2
+spec:
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - 192.168.1.0/24
+    vpc-2:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - 192.168.2.0/24
+```
+
+GW will advertise two routes:
+- 192.168.1.0/24 on vrf-vpc-2
+- 192.168.2.0/24 on vrf-vpc-1
+
+With dataplane configured to perform static NAT:
+- for vrf-vpc-1 nat is from src: 10.1.1.0/24 to src: 192.168.1.0/24, before routing
+- for vrf-vpc-2 nat is from dst: 192.168.1.0/24 to dst: 10.1.1.0/24, after routing
+- for vrf-vpc-2 nat is from src: 10.1.1.0/24 to src: 192.168.2.0/24, before routing
+- for vrf-vpc-1 nat is from dst: 192.168.2.0/24 to dst: 10.1.1.0/24, after routing
+
+### VPC1 <> VPC2 with overlapping subnets and not for some addresses
+
+```yaml
+apiVersion: gateway.githedgehog.com/v1alpha1
+kind: Peering
+metadata:
+  name: vpc-1--vpc-2
+spec:
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+        - not: 10.1.1.42/32 # that's just a syntactic sugar to avoid enumerating all the subnets explicitly
+      as:
+        - 192.168.1.0/24
+        - not: 192.168.1.7/32 # that's just a syntactic sugar to avoid enumerating all the subnets explicitly
+    vpc-2:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - 192.168.2.0/24
+```
+
+GW will advertise this minimal set of routes:
+For vpc-vrf-2
+- 192.168.1.0/30
+- 192.168.1.4/31
+- 192.168.1.6/32
+- 192.168.1.8/29
+- 192.168.1.16/28
+- 192.168.1.32/27
+- 192.168.1.64/26
+- 192.168.1.128/25
+
+For vpc-vrf-1
+- 192.168.2.0/24
+
+
+With dataplane configured to perform static NAT:
+- for vrf-vpc-1 nat is from src: 10.1.1.0/24 to src: 192.168.1.0/24, before routing, but excluding 192.168.1.7/32
+- for vrf-vpc-2 nat is from dst: 192.168.1.0/24 to dst: 10.1.1.0/24, after routing, but excluding 10.1.1.42/32
+- for vrf-vpc-2 nat is from src: 10.1.1.0/24 to src: 192.168.2.0/24, before routing
+- for vrf-vpc-1 nat is from dst: 192.168.2.0/24 to dst: 10.1.1.0/24, after routing
+
+### VPC1 <> External1
+
+```yaml
+apiVersion: gateway.githedgehog.com/v1alpha1
+kind: Peering
+metadata:
+  name: vpc-1--external-1
+spec:
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - cidr: 1.2.3.0/24
+    external-1:
+      ips: # TODO we need to support ge/le e.g. to allow more specific routes while filtering the bigger ones
+        - not: 10.0.0.0/8
+        - not: 192.168.0.0/24
+```
+
+GW will advertise this minimal set of routes:
+- 1.2.3.0/24 and advertises it to the external peer
+- What do we advertise for the external in vrf-vpc-1?
+  - We do not want to advertise the whole internet into the fabric
+  - Do we advertise 0.0.0.0/0 with a metric?
+  - After how many routes do we just punt and advertise a default route?
+  - Or should we just always advertise the complete enumeration of subnets from external's ips section?
+
+GW will receive routes for the whole internet (or whatever the external is peered to)
+- It will filter all routes for 10.0.0.0/8
+- It will filter all routes for 192.168.0.0/16
+- It will filter all routes for internally routed subnets (regardless of public or private IP)
+  - In this case, filter all routes for 1.2.3.0/24
+- This is an issue between VTEPs inside the gateway as well, probably don't want to replicate the whole internet 
+  routing table inside the gateway
+
+>[NOTE] The meaning of *not* is different when talking to an external, it is a route filter, not syntactic sugar
+
+With dataplane configured to perform static NAT:
+- for vrf-vpc-1 nat is from src: 10.1.1.0/24 to src: 192.168.1.0/24, before routing, but excluding 192.168.1.7/32
+- for vrf-vpc-2 nat is from dst: 192.168.1.0/24 to dst: 10.1.1.0/24, after routing, but excluding 10.1.1.42/32
+- for vrf-vpc-2 nat is from src: 10.1.1.0/24 to src: 192.168.2.0/24, before routing
+- for vrf-vpc-1 nat is from dst: 192.168.2.0/24 to dst: 10.1.1.0/24, after routing
+
+### VPC1 <> VPC2 with NAT and firewall
+
 ```yaml
 # Static NAT, VPC 1 -> VPC 2 and vice versa
 # VPC 2 exposes http port 80 on its private subnet 10.2.1.1/32
@@ -61,6 +182,8 @@ spec:
           tcp:
             srcPort: 443
 ```
+
+### Other examples
 
 ```yaml
 # vpc-e1 is external 1 and vpc-e2 is external 2
