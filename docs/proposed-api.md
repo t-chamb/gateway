@@ -94,16 +94,15 @@ spec:
   vpc-1:
     ips:
       - cidr: 10.1.1.0/24
+    as:
+      - 192.168.1.0/30
+    natType: stateful # as there are not enough IPs in the "as" pool
   vpc-e1:
     ips:
       - cidr: 0.0.0.0/0
       - not: 10.0.0.0/8
       - not: 192.168.0.0/16
       - not: 3.2.1.0/30
-    as: # Is this dynamic NAT since there are too few addresses here?
-        # which direction is the NAT here?
-        # or should this be on vpc-1
-      - 192.168.1.0/30
 ```
 
 ```yaml
