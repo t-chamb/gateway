@@ -33,6 +33,9 @@ be based on flow state.  How does this interact with other configuration?
 
 ### VPC1 <> VPC2 with overlapping subnets
 
+- vpc-1 with a single subnet 10.1.1.0/24 named subnet-1
+- vpc-2 with a the same subnet 10.1.1.0/24 named subnet-1
+
 ```yaml
 apiVersion: gateway.githedgehog.com/v1alpha1
 kind: Peering
@@ -47,7 +50,7 @@ spec:
         - 192.168.1.0/24
     vpc-2:
       ips:
-        - cidr: 10.1.1.0/24
+        - vpcSubnet: subnet-1 # just a shorthand for the VPC subnet, equivalent to `cidr: 10.1.1.0/24`
       as:
         - 192.168.2.0/24
 ```
@@ -139,7 +142,7 @@ GW will receive routes for the whole internet (or whatever the external is peere
 - It will filter all routes for 192.168.0.0/16
 - It will filter all routes for internally routed subnets (regardless of public or private IP)
   - In this case, filter all routes for 1.2.3.0/24
-- This is an issue between VTEPs inside the gateway as well, probably don't want to replicate the whole internet 
+- This is an issue between VTEPs inside the gateway as well, probably don't want to replicate the whole internet
   routing table inside the gateway
 
 >[NOTE] The meaning of *not* is different when talking to an external, it is a route filter, not syntactic sugar
@@ -162,25 +165,25 @@ kind: Peering
 metadata:
   name: vpc-1--vpc-2
 spec:
-  vpc1:
-    ips:
-      - cidr: 10.1.1.0/24
-      # - fromVPCSubnet: subnet1 # just a shorthand for the above
-    as: # Means static Src/Dst NAT for vpc1
-      - 192.168.1.0/24
-    ingress:
-      - allow:
-          stateless: true # it's the only options supported in the first release
-          tcp:
-            dstPort: 443
-  vpc2:
-    ips:
-      - cidr: 10.2.1.1/32
-    ingress:
-      - allow:
-          stateless: true
-          tcp:
-            srcPort: 443
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+      as: # Means static Src/Dst NAT for vpc1
+        - 192.168.1.0/24
+      ingress:
+        - allow:
+            stateless: true # it's the only options supported in the first release
+            tcp:
+              dstPort: 443
+    vpc-2:
+      ips:
+        - cidr: 10.2.1.1/32
+      ingress:
+        - allow:
+            stateless: true
+            tcp:
+              srcPort: 443
 ```
 
 ### Other examples
@@ -193,18 +196,17 @@ kind: Peering
 metadata:
   name: vpc-e1--vpc-e2
 spec:
-  vpc-e1:
-    ips:
-      - cidr: 0.0.0.0/0
-      - not: 10.0.0.0/8
-      - not: 192.168.0.0/16
-      - not: 1.2.3.0/24
-  vpc-e2:
-    ips:
-      - cidr: 0.0.0.0/0
-      - not: 10.0.0.0/8
-      - not: 192.168.0.0/16
-      - not: 3.2.1.0/30
+  peering:
+    vpc-e1:
+      ips:
+        - not: 10.0.0.0/8
+        - not: 192.168.0.0/16
+        - not: 1.2.3.0/24
+    vpc-e2:
+      ips:
+        - not: 10.0.0.0/8
+        - not: 192.168.0.0/16
+        - not: 3.2.1.0/30
 ```
 
 ```yaml
@@ -214,18 +216,18 @@ kind: Peering
 metadata:
   name: vpc-1--vpc-e1
 spec:
-  vpc-1:
-    ips:
-      - cidr: 10.1.1.0/24
-    as:
-      - 192.168.1.0/30
-    natType: stateful # as there are not enough IPs in the "as" pool
-  vpc-e1:
-    ips:
-      - cidr: 0.0.0.0/0
-      - not: 10.0.0.0/8
-      - not: 192.168.0.0/16
-      - not: 3.2.1.0/30
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - 192.168.1.0/30
+      natType: stateful # as there are not enough IPs in the "as" pool
+    vpc-e1:
+      ips:
+        - not: 10.0.0.0/8
+        - not: 192.168.0.0/16
+        - not: 3.2.1.0/30
 ```
 
 ```yaml
@@ -235,61 +237,38 @@ kind: Peering
 metadata:
   name: vpc-1--vpc-e1
 spec:
-  vpc-1:
-    ips:
-      - cidr: 10.1.1.0/24
-    as:
-      - 192.168.1.0/30
-    natType: stateful
-  vpc-e1:
-    metric: 0 # add 0 to the advertised route metrics
-    # At what point do we not advertise these routes to the switch, how do we decide?
-    ips:
-      - cidr: 0.0.0.0/0
-      - not: 10.0.0.0/8
-      - not: 192.168.0.0/16
-      - not: 1.2.3.0/30
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - 192.168.1.0/30
+      natType: stateful
+    vpc-e1:
+      metric: 0 # add 0 to the advertised route metrics
+      # At what point do we not advertise these routes to the switch, how do we decide?
+      ips:
+        - not: 10.0.0.0/8
+        - not: 192.168.0.0/16
+        - not: 1.2.3.0/30
 ---
 apiVersion: gateway.githedgehog.com/v1alpha1
 kind: Peering
 metadata:
   name: vpc-1--vpc-e2
 spec:
-  vpc-1:
-    ips:
-      - cidr: 10.1.1.0/24
-    as:
-      - 192.168.1.0/30
-    natType: stateful
-  vpc-e2:
-    metric: 10 # add 10 to the route metric advertised externally
-    # At what point do we not advertise these routes to the switch, how do we decide?
-    ips:
-      - cidr: 0.0.0.0/0
-      - not: 10.0.0.0/8
-      - not: 192.168.0.0/16
-      - not: 3.2.1.0/30
-```
-
-```yaml
-# vpc-1 <> vpc-1 with overlapping subnets
-apiVersion: gateway.githedgehog.com/v1alpha1
-kind: Peering
-metadata:
-  name: vpc-1--vpc-2
-spec:
-  vpc-1:
-    ips:
-      - cidr: 10.1.1.0/24
-      - not: 10.1.1.42/32
-    as:
-      - 192.168.1.0/24
-  vpc-2:
-    ips:
-      - cidr: 10.1.1.0/24
-    as:
-      - 192.168.2.0/24
-
-# { src: vpc-1,10.1.1.0/24 ; dst: 192.168.2.0/24 }
-# { src: vpc-2,10.1.1.0/24 ; dst: 192.168.1.0/24 }
+  peering:
+    vpc-1:
+      ips:
+        - cidr: 10.1.1.0/24
+      as:
+        - 192.168.1.0/30
+      natType: stateful
+    vpc-e2:
+      metric: 10 # add 10 to the route metric advertised externally
+      # At what point do we not advertise these routes to the switch, how do we decide?
+      ips:
+        - not: 10.0.0.0/8
+        - not: 192.168.0.0/16
+        - not: 3.2.1.0/30
 ```
