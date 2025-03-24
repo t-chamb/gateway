@@ -11,17 +11,17 @@ metadata:
   labels:
     app.kubernetes.io/name: gateway
     app.kubernetes.io/managed-by: kustomize
-  name: peeringinterface-admin-role
+  name: peering-admin-role
 rules:
 - apiGroups:
   - gateway.githedgehog.com
   resources:
-  - peeringinterfaces
+  - peerings
   verbs:
   - '*'
 - apiGroups:
   - gateway.githedgehog.com
   resources:
-  - peeringinterfaces/status
+  - peerings/status
   verbs:
   - get

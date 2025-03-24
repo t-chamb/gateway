@@ -9,15 +9,15 @@
 Package v1alpha1 contains API Schema definitions for the gateway v1alpha1 API group.
 
 ### Resource Types
-- [PeeringInterface](#peeringinterface)
+- [Peering](#peering)
 
 
 
-#### PeeringInterface
+#### Peering
 
 
 
-PeeringInterface is the Schema for the peeringinterfaces API.
+Peering is the Schema for the peerings API.
 
 
 
@@ -26,38 +26,38 @@ PeeringInterface is the Schema for the peeringinterfaces API.
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `gateway.githedgehog.com/v1alpha1` | | |
-| `kind` _string_ | `PeeringInterface` | | |
+| `kind` _string_ | `Peering` | | |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[PeeringInterfaceSpec](#peeringinterfacespec)_ |  |  |  |
-| `status` _[PeeringInterfaceStatus](#peeringinterfacestatus)_ |  |  |  |
+| `spec` _[PeeringSpec](#peeringspec)_ |  |  |  |
+| `status` _[PeeringStatus](#peeringstatus)_ |  |  |  |
 
 
-#### PeeringInterfaceSpec
+#### PeeringSpec
 
 
 
-PeeringInterfaceSpec defines the desired state of PeeringInterface.
+PeeringSpec defines the desired state of Peering.
 
 
 
 _Appears in:_
-- [PeeringInterface](#peeringinterface)
+- [Peering](#peering)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `foo` _string_ | Foo is an example field of PeeringInterface. Edit peeringinterface_types.go to remove/update |  |  |
+| `foo` _string_ | Foo is an example field of Peering. Edit peering_types.go to remove/update |  |  |
 
 
-#### PeeringInterfaceStatus
+#### PeeringStatus
 
 
 
-PeeringInterfaceStatus defines the observed state of PeeringInterface.
+PeeringStatus defines the observed state of Peering.
 
 
 
 _Appears in:_
-- [PeeringInterface](#peeringinterface)
+- [Peering](#peering)
 
 
 

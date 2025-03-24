@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.1
-  name: peeringinterfaces.gateway.githedgehog.com
+  name: peerings.gateway.githedgehog.com
 spec:
   group: gateway.githedgehog.com
   names:
-    kind: PeeringInterface
-    listKind: PeeringInterfaceList
-    plural: peeringinterfaces
-    singular: peeringinterface
+    kind: Peering
+    listKind: PeeringList
+    plural: peerings
+    singular: peering
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PeeringInterface is the Schema for the peeringinterfaces API.
+        description: Peering is the Schema for the peerings API.
         properties:
           apiVersion:
             description: |-
@@ -37,15 +37,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: PeeringInterfaceSpec defines the desired state of PeeringInterface.
+            description: PeeringSpec defines the desired state of Peering.
             properties:
               foo:
-                description: Foo is an example field of PeeringInterface. Edit peeringinterface_types.go
+                description: Foo is an example field of Peering. Edit peering_types.go
                   to remove/update
                 type: string
             type: object
           status:
-            description: PeeringInterfaceStatus defines the observed state of PeeringInterface.
+            description: PeeringStatus defines the observed state of Peering.
             type: object
         type: object
     served: true

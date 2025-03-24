@@ -78,7 +78,7 @@ test-api: _helm-gateway-api
     kind export kubeconfig --name kind
     {{helm}} install -n default gateway-api config/helm/gateway-api-{{version}}.tgz
     sleep 10
-    kubectl wait --for condition=established --timeout=60s crd/peeringinterfaces.gateway.githedgehog.com
+    kubectl wait --for condition=established --timeout=60s crd/peerings.gateway.githedgehog.com
     kubectl get crd | grep gateway
     kind delete cluster --name kind
 

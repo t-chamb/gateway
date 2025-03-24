@@ -11,9 +11,10 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
   domain: githedgehog.com
   group: gateway
-  kind: PeeringInterface
+  kind: Peering
   path: go.githedgehog.com/gateway/api/v1alpha1
   version: v1alpha1
 version: "3"

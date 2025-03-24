@@ -22,7 +22,6 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the {{ .ProjectName }} itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- peeringinterface_admin_role.yaml
-- peeringinterface_editor_role.yaml
-- peeringinterface_viewer_role.yaml
-
+- peering_admin_role.yaml
+- peering_editor_role.yaml
+- peering_viewer_role.yaml

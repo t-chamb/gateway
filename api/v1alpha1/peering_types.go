@@ -10,17 +10,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// PeeringInterfaceSpec defines the desired state of PeeringInterface.
-type PeeringInterfaceSpec struct {
+// PeeringSpec defines the desired state of Peering.
+type PeeringSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of PeeringInterface. Edit peeringinterface_types.go to remove/update
+	// Foo is an example field of Peering. Edit peering_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// PeeringInterfaceStatus defines the observed state of PeeringInterface.
-type PeeringInterfaceStatus struct {
+// PeeringStatus defines the observed state of Peering.
+type PeeringStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -28,24 +28,24 @@ type PeeringInterfaceStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// PeeringInterface is the Schema for the peeringinterfaces API.
-type PeeringInterface struct {
+// Peering is the Schema for the peerings API.
+type Peering struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PeeringInterfaceSpec   `json:"spec,omitempty"`
-	Status PeeringInterfaceStatus `json:"status,omitempty"`
+	Spec   PeeringSpec   `json:"spec,omitempty"`
+	Status PeeringStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// PeeringInterfaceList contains a list of PeeringInterface.
-type PeeringInterfaceList struct {
+// PeeringList contains a list of Peering.
+type PeeringList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PeeringInterface `json:"items"`
+	Items           []Peering `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&PeeringInterface{}, &PeeringInterfaceList{})
+	SchemeBuilder.Register(&Peering{}, &PeeringList{})
 }
