@@ -7,23 +7,46 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // PeeringSpec defines the desired state of Peering.
 type PeeringSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Peering map[string]*PeeringEntry `json:"peering,omitempty"`
+}
 
-	// Foo is an example field of Peering. Edit peering_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+type PeeringEntry struct {
+	IPs     []PeeringEntryIP      `json:"ips,omitempty"`
+	As      []PeeringEntryAs      `json:"as,omitempty"`
+	Ingress []PeeringEntryIngress `json:"ingress,omitempty"`
+	// TODO add natType: stateful # as there are not enough IPs in the "as" pool
+	// TODO add metric: 0 # add 0 to the advertised route metrics
+}
+
+type PeeringEntryIP struct {
+	CIDR      string `json:"cidr,omitempty"`
+	Not       string `json:"not,omitempty"`
+	VPCSubnet string `json:"vpcSubnet,omitempty"`
+}
+
+type PeeringEntryAs struct {
+	CIDR string `json:"cidr,omitempty"`
+	Not  string `json:"not,omitempty"`
+}
+
+type PeeringEntryIngress struct {
+	Allow *PeeringEntryIngressAllow `json:"allow,omitempty"`
+	// TODO add deny?
+}
+
+type PeeringEntryIngressAllow struct {
+	// TODO add actual fields
+	// stateless: true
+	// 	 tcp:
+	//     srcPort: 443
 }
 
 // PeeringStatus defines the observed state of Peering.
-type PeeringStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
+type PeeringStatus struct{}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

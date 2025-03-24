@@ -32,6 +32,88 @@ Peering is the Schema for the peerings API.
 | `status` _[PeeringStatus](#peeringstatus)_ |  |  |  |
 
 
+#### PeeringEntry
+
+
+
+
+
+
+
+_Appears in:_
+- [PeeringSpec](#peeringspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ips` _[PeeringEntryIP](#peeringentryip) array_ |  |  |  |
+| `as` _[PeeringEntryAs](#peeringentryas) array_ |  |  |  |
+| `ingress` _[PeeringEntryIngress](#peeringentryingress) array_ |  |  |  |
+
+
+#### PeeringEntryAs
+
+
+
+
+
+
+
+_Appears in:_
+- [PeeringEntry](#peeringentry)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `cidr` _string_ |  |  |  |
+| `not` _string_ |  |  |  |
+
+
+#### PeeringEntryIP
+
+
+
+
+
+
+
+_Appears in:_
+- [PeeringEntry](#peeringentry)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `cidr` _string_ |  |  |  |
+| `not` _string_ |  |  |  |
+| `vpcSubnet` _string_ |  |  |  |
+
+
+#### PeeringEntryIngress
+
+
+
+
+
+
+
+_Appears in:_
+- [PeeringEntry](#peeringentry)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `allow` _[PeeringEntryIngressAllow](#peeringentryingressallow)_ |  |  |  |
+
+
+#### PeeringEntryIngressAllow
+
+
+
+
+
+
+
+_Appears in:_
+- [PeeringEntryIngress](#peeringentryingress)
+
+
+
 #### PeeringSpec
 
 
@@ -45,7 +127,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `foo` _string_ | Foo is an example field of Peering. Edit peering_types.go to remove/update |  |  |
+| `peering` _object (keys:string, values:[PeeringEntry](#peeringentry))_ |  |  |  |
 
 
 #### PeeringStatus

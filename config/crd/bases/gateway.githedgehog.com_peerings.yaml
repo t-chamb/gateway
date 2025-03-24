@@ -39,10 +39,38 @@ spec:
           spec:
             description: PeeringSpec defines the desired state of Peering.
             properties:
-              foo:
-                description: Foo is an example field of Peering. Edit peering_types.go
-                  to remove/update
-                type: string
+              peering:
+                additionalProperties:
+                  properties:
+                    as:
+                      items:
+                        properties:
+                          cidr:
+                            type: string
+                          not:
+                            type: string
+                        type: object
+                      type: array
+                    ingress:
+                      items:
+                        properties:
+                          allow:
+                            type: object
+                        type: object
+                      type: array
+                    ips:
+                      items:
+                        properties:
+                          cidr:
+                            type: string
+                          not:
+                            type: string
+                          vpcSubnet:
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: object
             type: object
           status:
             description: PeeringStatus defines the observed state of Peering.
