@@ -11,6 +11,7 @@ import (
 
 // PeeringSpec defines the desired state of Peering.
 type PeeringSpec struct {
+	// Peerings is a map of peering entries for each VPC participating in the peering (keyed by VPC name)
 	Peering map[string]*PeeringEntry `json:"peering,omitempty"`
 }
 

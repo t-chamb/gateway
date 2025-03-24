@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.1
-  name: peerings.gateway.githedgehog.com
+  name: vpcinfoes.gateway.githedgehog.com
 spec:
   group: gateway.githedgehog.com
   names:
-    kind: Peering
-    listKind: PeeringList
-    plural: peerings
-    singular: peering
+    kind: VPCInfo
+    listKind: VPCInfoList
+    plural: vpcinfoes
+    singular: vpcinfo
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Peering is the Schema for the peerings API.
+        description: VPCInfo is the Schema for the vpcinfoes API.
         properties:
           apiVersion:
             description: |-
@@ -37,45 +37,36 @@ spec:
           metadata:
             type: object
           spec:
-            description: PeeringSpec defines the desired state of Peering.
+            description: VPCInfoSpec defines the desired state of VPCInfo.
             properties:
-              peering:
+              subnets:
                 additionalProperties:
                   properties:
-                    as:
-                      items:
-                        properties:
-                          cidr:
-                            type: string
-                          not:
-                            type: string
-                        type: object
-                      type: array
-                    ingress:
-                      items:
-                        properties:
-                          allow:
-                            type: object
-                        type: object
-                      type: array
-                    ips:
-                      items:
-                        properties:
-                          cidr:
-                            type: string
-                          not:
-                            type: string
-                          vpcSubnet:
-                            type: string
-                        type: object
-                      type: array
+                    subnet:
+                      description: CIDR is the subnet CIDR block, such as "10.0.0.0/24"
+                      type: string
+                    vni:
+                      description: |-
+                        // Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway
+                        Gateway string `json:"gateway,omitempty"` // TODO do we actually need this?
+                        VNI is the VNI for the subnet
+                      format: int32
+                      type: integer
                   type: object
-                description: Peerings is a map of peering entries for each VPC participating
-                  in the peering (keyed by VPC name)
+                description: Subnets is a map of all subnets in the VPC (incl. CIDRs,
+                  VNIs, etc) keyed by the subnet name
                 type: object
+              vni:
+                description: VNI is the VNI for the VPC
+                format: int32
+                type: integer
+              vrf:
+                description: VRF (optional) is the VRF name for the VPC, if not specified,
+                  the default VRF is used
+                type: string
             type: object
           status:
-            description: PeeringStatus defines the observed state of Peering.
+            description: VPCInfoStatus defines the observed state of VPCInfo.
             type: object
         type: object
     served: true

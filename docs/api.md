@@ -10,6 +10,7 @@ Package v1alpha1 contains API Schema definitions for the gateway v1alpha1 API gr
 
 ### Resource Types
 - [Peering](#peering)
+- [VPCInfo](#vpcinfo)
 
 
 
@@ -127,7 +128,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `peering` _object (keys:string, values:[PeeringEntry](#peeringentry))_ |  |  |  |
+| `peering` _object (keys:string, values:[PeeringEntry](#peeringentry))_ | Peerings is a map of peering entries for each VPC participating in the peering (keyed by VPC name) |  |  |
 
 
 #### PeeringStatus
@@ -141,5 +142,72 @@ PeeringStatus defines the observed state of Peering.
 _Appears in:_
 - [Peering](#peering)
 
+
+
+#### VPCInfo
+
+
+
+VPCInfo is the Schema for the vpcinfoes API.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `gateway.githedgehog.com/v1alpha1` | | |
+| `kind` _string_ | `VPCInfo` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[VPCInfoSpec](#vpcinfospec)_ |  |  |  |
+| `status` _[VPCInfoStatus](#vpcinfostatus)_ |  |  |  |
+
+
+#### VPCInfoSpec
+
+
+
+VPCInfoSpec defines the desired state of VPCInfo.
+
+
+
+_Appears in:_
+- [VPCInfo](#vpcinfo)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `subnets` _object (keys:string, values:[VPCInfoSubnet](#vpcinfosubnet))_ | Subnets is a map of all subnets in the VPC (incl. CIDRs, VNIs, etc) keyed by the subnet name |  |  |
+| `vni` _integer_ | VNI is the VNI for the VPC |  |  |
+| `vrf` _string_ | VRF (optional) is the VRF name for the VPC, if not specified, the default VRF is used |  |  |
+
+
+#### VPCInfoStatus
+
+
+
+VPCInfoStatus defines the observed state of VPCInfo.
+
+
+
+_Appears in:_
+- [VPCInfo](#vpcinfo)
+
+
+
+#### VPCInfoSubnet
+
+
+
+
+
+
+
+_Appears in:_
+- [VPCInfoSpec](#vpcinfospec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `subnet` _string_ | CIDR is the subnet CIDR block, such as "10.0.0.0/24" |  |  |
+| `vni` _integer_ | // Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway<br />Gateway string `json:"gateway,omitempty"` // TODO do we actually need this?<br />VNI is the VNI for the subnet |  |  |
 
 
