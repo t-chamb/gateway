@@ -42,14 +42,16 @@ spec:
               subnets:
                 additionalProperties:
                   properties:
+                    gateway:
+                      description: Gateway (optional) for the subnet, if not specified,
+                        the first IP (e.g. 10.0.0.1) in the subnet is used as the
+                        gateway
+                      type: string
                     subnet:
                       description: CIDR is the subnet CIDR block, such as "10.0.0.0/24"
                       type: string
                     vni:
-                      description: |-
-                        // Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway
-                        Gateway string `json:"gateway,omitempty"` // TODO do we actually need this?
-                        VNI is the VNI for the subnet
+                      description: VNI is the VNI for the subnet
                       format: int32
                       type: integer
                   type: object
@@ -62,7 +64,7 @@ spec:
                 type: integer
               vrf:
                 description: VRF (optional) is the VRF name for the VPC, if not specified,
-                  the default VRF is used
+                  predictable VRF name is generated
                 type: string
             type: object
           status:

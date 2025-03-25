@@ -178,7 +178,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `subnets` _object (keys:string, values:[VPCInfoSubnet](#vpcinfosubnet))_ | Subnets is a map of all subnets in the VPC (incl. CIDRs, VNIs, etc) keyed by the subnet name |  |  |
 | `vni` _integer_ | VNI is the VNI for the VPC |  |  |
-| `vrf` _string_ | VRF (optional) is the VRF name for the VPC, if not specified, the default VRF is used |  |  |
+| `vrf` _string_ | VRF (optional) is the VRF name for the VPC, if not specified, predictable VRF name is generated |  |  |
 
 
 #### VPCInfoStatus
@@ -208,6 +208,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `subnet` _string_ | CIDR is the subnet CIDR block, such as "10.0.0.0/24" |  |  |
-| `vni` _integer_ | // Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway<br />Gateway string `json:"gateway,omitempty"` // TODO do we actually need this?<br />VNI is the VNI for the subnet |  |  |
+| `gateway` _string_ | Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway |  |  |
+| `vni` _integer_ | VNI is the VNI for the subnet |  |  |
 
 
