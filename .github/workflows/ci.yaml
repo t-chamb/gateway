@@ -54,6 +54,10 @@ jobs:
           # keep in sync with hack/tools.just
           version: v1.64.2
 
+      - name: Build everything
+        run: |
+          just --timestamp build kube-build
+
       - name: Run tests
         run: |
           just --timestamp test

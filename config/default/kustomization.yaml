@@ -39,19 +39,18 @@ patches:
   - path: manager_metrics_patch.yaml
     target:
       kind: Deployment
-# Uncomment the patches line if you enable Metrics and CertManager
-# [METRICS-WITH-CERTS] To enable metrics protected with certManager, uncomment the following line.
-# This patch will protect the metrics with certManager self-signed certs.
-#- path: cert_metrics_manager_patch.yaml
-#  target:
-#    kind: Deployment
+  # Uncomment the patches line if you enable Metrics and CertManager
+  # [METRICS-WITH-CERTS] To enable metrics protected with certManager, uncomment the following line.
+  # This patch will protect the metrics with certManager self-signed certs.
+  #- path: cert_metrics_manager_patch.yaml
+  #  target:
+  #    kind: Deployment
 
-# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
-# crd/kustomization.yaml
-- path: manager_webhook_patch.yaml
-  target:
-    kind: Deployment
-
+  # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
+  # crd/kustomization.yaml
+  - path: manager_webhook_patch.yaml
+    target:
+      kind: Deployment
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
 # Uncomment the following replacements to add the cert-manager CA injection annotations
 #replacements:
