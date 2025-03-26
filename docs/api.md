@@ -207,7 +207,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `subnet` _string_ | CIDR is the subnet CIDR block, such as "10.0.0.0/24" |  |  |
+| `cidr` _string_ | CIDR is the subnet CIDR block, such as "10.0.0.0/24" |  |  |
 | `gateway` _string_ | Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway |  |  |
 | `vni` _integer_ | VNI is the VNI for the subnet |  |  |
 

@@ -21,7 +21,7 @@ type VPCInfoSpec struct {
 
 type VPCInfoSubnet struct {
 	// CIDR is the subnet CIDR block, such as "10.0.0.0/24"
-	CIDR string `json:"subnet,omitempty"`
+	CIDR string `json:"cidr,omitempty"`
 	// Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway
 	Gateway string `json:"gateway,omitempty"`
 	// VNI is the VNI for the subnet

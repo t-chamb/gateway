@@ -42,13 +42,13 @@ spec:
               subnets:
                 additionalProperties:
                   properties:
+                    cidr:
+                      description: CIDR is the subnet CIDR block, such as "10.0.0.0/24"
+                      type: string
                     gateway:
                       description: Gateway (optional) for the subnet, if not specified,
                         the first IP (e.g. 10.0.0.1) in the subnet is used as the
                         gateway
-                      type: string
-                    subnet:
-                      description: CIDR is the subnet CIDR block, such as "10.0.0.0/24"
                       type: string
                     vni:
                       description: VNI is the VNI for the subnet
