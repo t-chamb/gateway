@@ -5,6 +5,7 @@
 domain: githedgehog.com
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: gateway
 repo: go.githedgehog.com/gateway
 resources:
