@@ -4,7 +4,10 @@
 package v1alpha1
 
 import (
+	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -54,4 +57,13 @@ type VPCInfoList struct {
 
 func init() {
 	SchemeBuilder.Register(&VPCInfo{}, &VPCInfoList{})
+}
+
+func (vpc *VPCInfo) Default() {
+	// TODO add defaulting logic
+}
+
+func (vpc *VPCInfo) Validate(_ context.Context, _ client.Reader) error {
+	// TODO add validation logic
+	return nil
 }
