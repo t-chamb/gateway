@@ -13,6 +13,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	gatewayv1alpha1 "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -23,8 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	gatewayv1alpha1 "go.githedgehog.com/gateway/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -188,6 +187,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO add controllers/webhooks here
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
