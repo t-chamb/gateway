@@ -1,3 +1,6 @@
+// Copyright 2025 Hedgehog
+// SPDX-License-Identifier: Apache-2.0
+
 package ctrl
 
 import (
@@ -5,12 +8,15 @@ import (
 	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 )
+
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways/finalizers,verbs=update
 
 type GatewayReconciler struct {
 	client.Client
@@ -21,7 +27,7 @@ func SetupGatewayReconcilerWith(mgr ctrl.Manager) error {
 		Client: mgr.GetClient(),
 	}
 
-	if err := builder.TypedControllerManagedBy[*gwapi.Gateway](mgr).
+	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("Gateway").
 		For(&gwapi.Gateway{}).
 		Complete(r); err != nil {
@@ -31,7 +37,7 @@ func SetupGatewayReconcilerWith(mgr ctrl.Manager) error {
 	return nil
 }
 
-func (r *GatewayReconciler) Reconcile(ctx context.Context, req *gwapi.Gateway) (ctrl.Result, error) {
+func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
 	l.Info("Reconciling Gateways not implemented yet", "namespace", req.Namespace, "name", req.Name)
