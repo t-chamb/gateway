@@ -10,6 +10,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-gateway-githedgehog-com-v1alpha1-gateway
+  failurePolicy: Fail
+  name: mgateway-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-gateway-githedgehog-com-v1alpha1-peering
   failurePolicy: Fail
   name: mpeering-v1alpha1.kb.io
@@ -44,12 +64,95 @@ webhooks:
     resources:
     - vpcinfoes
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-gateway-githedgehog-com-v1beta1-gateway
+  failurePolicy: Fail
+  name: mgateway.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - gateways
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-gateway-githedgehog-com-v1beta1-peering
+  failurePolicy: Fail
+  name: mpeering.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - peerings
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-gateway-githedgehog-com-v1beta1-vpcinfo
+  failurePolicy: Fail
+  name: mvpcinfo.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - vpcinfos
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: validating-webhook-configuration
 webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-gateway-githedgehog-com-v1alpha1-gateway
+  failurePolicy: Fail
+  name: vgateway-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   clientConfig:
@@ -89,4 +192,67 @@ webhooks:
     - UPDATE
     resources:
     - vpcinfoes
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-gateway-githedgehog-com-v1beta1-gateway
+  failurePolicy: Fail
+  name: vgateway.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - gateways
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-gateway-githedgehog-com-v1beta1-peering
+  failurePolicy: Fail
+  name: vpeering.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - peerings
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-gateway-githedgehog-com-v1beta1-vpcinfo
+  failurePolicy: Fail
+  name: vvpcinfo.kb.io
+  rules:
+  - apiGroups:
+    - gateway.githedgehog.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - vpcinfos
   sideEffects: None
