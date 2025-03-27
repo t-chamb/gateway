@@ -14,8 +14,8 @@ import (
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 )
 
-// +kubebuilder:webhook:path=/mutate-gateway-githedgehog-com-v1beta1-gateway,mutating=true,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=gateways,verbs=create;update;delete,versions=v1beta1,name=mgateway.kb.io,admissionReviewVersions=v1
-// +kubebuilder:webhook:path=/validate-gateway-githedgehog-com-v1beta1-gateway,mutating=false,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=gateways,verbs=create;update;delete,versions=v1beta1,name=vgateway.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-gateway-githedgehog-com-v1alpha1-gateway,mutating=true,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=gateways,verbs=create;update;delete,versions=v1alpha1,name=mgateway.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-gateway-githedgehog-com-v1alpha1-gateway,mutating=false,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=gateways,verbs=create;update;delete,versions=v1alpha1,name=vgateway.kb.io,admissionReviewVersions=v1
 
 type GatewayWebhook struct {
 	client.Reader
