@@ -9,8 +9,54 @@
 Package v1alpha1 contains API Schema definitions for the gateway v1alpha1 API group.
 
 ### Resource Types
+- [Gateway](#gateway)
 - [Peering](#peering)
 - [VPCInfo](#vpcinfo)
+
+
+
+#### Gateway
+
+
+
+Gateway is the Schema for the gateways API.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `gateway.githedgehog.com/v1alpha1` | | |
+| `kind` _string_ | `Gateway` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[GatewaySpec](#gatewayspec)_ |  |  |  |
+| `status` _[GatewayStatus](#gatewaystatus)_ |  |  |  |
+
+
+#### GatewaySpec
+
+
+
+GatewaySpec defines the desired state of Gateway.
+
+
+
+_Appears in:_
+- [Gateway](#gateway)
+
+
+
+#### GatewayStatus
+
+
+
+GatewayStatus defines the observed state of Gateway.
+
+
+
+_Appears in:_
+- [Gateway](#gateway)
 
 
 

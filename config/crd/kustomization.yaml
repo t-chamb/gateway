@@ -4,6 +4,7 @@
 resources:
 - bases/gateway.githedgehog.com_peerings.yaml
 - bases/gateway.githedgehog.com_vpcinfoes.yaml
+- bases/gateway.githedgehog.com_gateways.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
