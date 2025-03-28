@@ -18,7 +18,7 @@ import (
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways/finalizers,verbs=update
 
-// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfos,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfoes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=peerings,verbs=get;list;watch
 
 type GatewayReconciler struct {

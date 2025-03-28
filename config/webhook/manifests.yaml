@@ -65,7 +65,7 @@ webhooks:
     - UPDATE
     - DELETE
     resources:
-    - vpcinfos
+    - vpcinfoes
   sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -134,5 +134,5 @@ webhooks:
     - UPDATE
     - DELETE
     resources:
-    - vpcinfos
+    - vpcinfoes
   sideEffects: None

@@ -14,8 +14,8 @@ import (
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 )
 
-// +kubebuilder:webhook:path=/mutate-gateway-githedgehog-com-v1alpha1-vpcinfo,mutating=true,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=vpcinfos,verbs=create;update;delete,versions=v1alpha1,name=mvpcinfo.kb.io,admissionReviewVersions=v1
-// +kubebuilder:webhook:path=/validate-gateway-githedgehog-com-v1alpha1-vpcinfo,mutating=false,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=vpcinfos,verbs=create;update;delete,versions=v1alpha1,name=vvpcinfo.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-gateway-githedgehog-com-v1alpha1-vpcinfo,mutating=true,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=vpcinfoes,verbs=create;update;delete,versions=v1alpha1,name=mvpcinfo.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-gateway-githedgehog-com-v1alpha1-vpcinfo,mutating=false,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=vpcinfoes,verbs=create;update;delete,versions=v1alpha1,name=vvpcinfo.kb.io,admissionReviewVersions=v1
 
 type VPCInfoWebhook struct {
 	client.Reader

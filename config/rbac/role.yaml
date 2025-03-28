@@ -34,7 +34,7 @@ rules:
   - gateway.githedgehog.com
   resources:
   - peerings
-  - vpcinfos
+  - vpcinfoes
   verbs:
   - get
   - list
