@@ -8,7 +8,6 @@ rules:
   - gateway.githedgehog.com
   resources:
   - gateways
-  - peerings
   verbs:
   - create
   - delete
@@ -21,15 +20,22 @@ rules:
   - gateway.githedgehog.com
   resources:
   - gateways/finalizers
-  - peerings/finalizers
   verbs:
   - update
 - apiGroups:
   - gateway.githedgehog.com
   resources:
   - gateways/status
-  - peerings/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - gateway.githedgehog.com
+  resources:
+  - peerings
+  - vpcinfos
+  verbs:
+  - get
+  - list
+  - watch
