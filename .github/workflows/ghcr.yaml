@@ -11,9 +11,9 @@ jobs:
     strategy:
       matrix:
         package:
-          - gateway/gateway-ctrl
+          - gateway/gateway
           - gateway/charts/gateway-api
-          - gateway/charts/gateway-ctrl
+          - gateway/charts/gateway
 
     steps:
       - name: ghcp-prune
