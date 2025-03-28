@@ -59,7 +59,7 @@ spec:
           type: RuntimeDefault
       containers:
         - command:
-            - /bin/gateway-ctrl
+            - /bin/gateway
           args:
             - --leader-elect
             - --health-probe-bind-address=:8081
