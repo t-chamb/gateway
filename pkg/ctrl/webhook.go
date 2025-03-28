@@ -36,7 +36,7 @@ func (t *untypedDefaulter[T]) Default(ctx context.Context, obj runtime.Object) e
 		return fmt.Errorf("%w: expected %T but got %T", ErrUnexpectedType, typed, obj)
 	}
 
-	return t.defaulter.Default(ctx, typed)
+	return t.defaulter.Default(ctx, typed) //nolint:wrapcheck
 }
 
 type TypedValidator[T runtime.Object] interface {
@@ -63,7 +63,7 @@ func (t *untypedValidator[T]) ValidateCreate(ctx context.Context, obj runtime.Ob
 		return nil, fmt.Errorf("%w: expected %T but got %T", ErrUnexpectedType, typed, obj)
 	}
 
-	return t.validator.ValidateCreate(ctx, typed)
+	return t.validator.ValidateCreate(ctx, typed) //nolint:wrapcheck
 }
 
 func (t *untypedValidator[T]) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
@@ -77,7 +77,7 @@ func (t *untypedValidator[T]) ValidateUpdate(ctx context.Context, oldObj, newObj
 		return nil, fmt.Errorf("%w: new expected %T but got %T", ErrUnexpectedType, newTyped, newObj)
 	}
 
-	return t.validator.ValidateUpdate(ctx, oldTyped, newTyped)
+	return t.validator.ValidateUpdate(ctx, oldTyped, newTyped) //nolint:wrapcheck
 }
 
 func (t *untypedValidator[T]) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
@@ -86,5 +86,5 @@ func (t *untypedValidator[T]) ValidateDelete(ctx context.Context, obj runtime.Ob
 		return nil, fmt.Errorf("%w: expected %T but got %T", ErrUnexpectedType, typed, obj)
 	}
 
-	return t.validator.ValidateDelete(ctx, typed)
+	return t.validator.ValidateDelete(ctx, typed) //nolint:wrapcheck
 }

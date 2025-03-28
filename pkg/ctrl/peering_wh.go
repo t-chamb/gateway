@@ -49,6 +49,7 @@ func (w *PeeringWebhook) ValidateCreate(ctx context.Context, obj *gwapi.Peering)
 
 func (w *PeeringWebhook) ValidateUpdate(ctx context.Context, oldObj *gwapi.Peering, newObj *gwapi.Peering) (admission.Warnings, error) {
 	// TODO validate diff between oldObj and newObj if needed
+	_ = oldObj
 
 	return nil, newObj.Validate(ctx, w.Reader) //nolint:wrapcheck
 }
