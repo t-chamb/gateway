@@ -49,6 +49,7 @@ func (w *VPCInfoWebhook) ValidateCreate(ctx context.Context, obj *gwapi.VPCInfo)
 
 func (w *VPCInfoWebhook) ValidateUpdate(ctx context.Context, oldObj *gwapi.VPCInfo, newObj *gwapi.VPCInfo) (admission.Warnings, error) {
 	// TODO validate diff between oldObj and newObj if needed
+	_ = oldObj
 
 	return nil, newObj.Validate(ctx, w.Reader) //nolint:wrapcheck
 }

@@ -49,6 +49,7 @@ func (w *GatewayWebhook) ValidateCreate(ctx context.Context, obj *gwapi.Gateway)
 
 func (w *GatewayWebhook) ValidateUpdate(ctx context.Context, oldObj *gwapi.Gateway, newObj *gwapi.Gateway) (admission.Warnings, error) {
 	// TODO validate diff between oldObj and newObj if needed
+	_ = oldObj
 
 	return nil, newObj.Validate(ctx, w.Reader) //nolint:wrapcheck
 }
