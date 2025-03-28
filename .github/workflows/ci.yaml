@@ -75,6 +75,7 @@ jobs:
       # Don't remove it! We shouldn't allow CI to pass if there are any changes not committed after running gen/lint/test
       - name: Fail on dirty
         run: |
+          git diff
           git status --short
           git diff --quiet
 
