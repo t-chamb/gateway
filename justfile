@@ -30,7 +30,7 @@ go_flags := "-ldflags=\"-w -s -X go.githedgehog.com/gateway/pkg/version.Version=
 go_build := "go build " + go_flags
 go_linux_build := "GOOS=linux GOARCH=amd64 " + go_build
 
-_kube_gen: _controller_gen
+_kube_gen:
   # Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject implementations
   {{controller_gen}} object:headerFile="hack/boilerplate.go.txt" paths="./..."
   # Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects
