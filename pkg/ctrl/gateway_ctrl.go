@@ -7,9 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	kctrl "sigs.k8s.io/controller-runtime"
+	kclient "sigs.k8s.io/controller-runtime/pkg/client"
+	kctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 )
@@ -22,15 +22,15 @@ import (
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=peerings,verbs=get;list;watch
 
 type GatewayReconciler struct {
-	client.Client
+	kclient.Client
 }
 
-func SetupGatewayReconcilerWith(mgr ctrl.Manager) error {
+func SetupGatewayReconcilerWith(mgr kctrl.Manager) error {
 	r := &GatewayReconciler{
 		Client: mgr.GetClient(),
 	}
 
-	if err := ctrl.NewControllerManagedBy(mgr).
+	if err := kctrl.NewControllerManagedBy(mgr).
 		Named("Gateway").
 		For(&gwapi.Gateway{}).
 		Complete(r); err != nil {
@@ -40,10 +40,10 @@ func SetupGatewayReconcilerWith(mgr ctrl.Manager) error {
 	return nil
 }
 
-func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
+func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (kctrl.Result, error) {
+	l := kctrllog.FromContext(ctx)
 
 	l.Info("Reconciling Gateways not implemented yet", "namespace", req.Namespace, "name", req.Name)
 
-	return ctrl.Result{}, nil
+	return kctrl.Result{}, nil
 }

@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	kctrl "sigs.k8s.io/controller-runtime"
+	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
@@ -18,15 +18,15 @@ import (
 // +kubebuilder:webhook:path=/validate-gateway-githedgehog-com-v1alpha1-gateway,mutating=false,failurePolicy=fail,sideEffects=None,groups=gateway.githedgehog.com,resources=gateways,verbs=create;update;delete,versions=v1alpha1,name=vgateway.kb.io,admissionReviewVersions=v1
 
 type GatewayWebhook struct {
-	client.Reader
+	kclient.Reader
 }
 
-func SetupGatewayWebhookWith(mgr ctrl.Manager) error {
+func SetupGatewayWebhookWith(mgr kctrl.Manager) error {
 	w := &GatewayWebhook{
 		Reader: mgr.GetClient(),
 	}
 
-	if err := ctrl.NewWebhookManagedBy(mgr).
+	if err := kctrl.NewWebhookManagedBy(mgr).
 		For(&gwapi.Gateway{}).
 		WithDefaulter(FromTypedDefaulter(w)).
 		WithValidator(FromTypedValidator(w)).
