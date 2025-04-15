@@ -18,9 +18,13 @@ type PeeringSpec struct {
 	Peering map[string]*PeeringEntry `json:"peering,omitempty"`
 }
 
+type PeeringEntryExpose struct {
+	IPs []PeeringEntryIP `json:"ips,omitempty"`
+	As  []PeeringEntryAs `json:"as,omitempty"`
+}
+
 type PeeringEntry struct {
-	IPs     []PeeringEntryIP      `json:"ips,omitempty"`
-	As      []PeeringEntryAs      `json:"as,omitempty"`
+	Expose  []PeeringEntryExpose  `json:"expose,omitempty"`
 	Ingress []PeeringEntryIngress `json:"ingress,omitempty"`
 	// TODO add natType: stateful # as there are not enough IPs in the "as" pool
 	// TODO add metric: 0 # add 0 to the advertised route metrics

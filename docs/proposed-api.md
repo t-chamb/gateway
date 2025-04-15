@@ -44,15 +44,17 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-      as:
-        - 192.168.1.0/24
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as:
+            - cidr: 192.168.1.0/24
     vpc-2:
-      ips:
-        - vpcSubnet: subnet-1 # just a shorthand for the VPC subnet, equivalent to `cidr: 10.1.1.0/24`
-      as:
-        - 192.168.2.0/24
+      expose:
+        - ips:
+            - vpcSubnet: subnet-1 # just a shorthand for the VPC subnet, equivalent to `cidr: 10.1.1.0/24`
+          as:
+            - cidr: 192.168.2.0/24
 ```
 
 GW will advertise two routes:
@@ -75,17 +77,19 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-        - not: 10.1.1.42/32 # that's just a syntactic sugar to avoid enumerating all the subnets explicitly
-      as:
-        - 192.168.1.0/24
-        - not: 192.168.1.7/32 # that's just a syntactic sugar to avoid enumerating all the subnets explicitly
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+            - not: 10.1.1.42/32 # that's just a syntactic sugar to avoid enumerating all the subnets explicitly
+          as:
+            - cidr: 192.168.1.0/24
+            - not: 192.168.1.7/32 # that's just a syntactic sugar to avoid enumerating all the subnets explicitly
     vpc-2:
-      ips:
-        - cidr: 10.1.1.0/24
-      as:
-        - 192.168.2.0/24
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as:
+            - cidr: 192.168.2.0/24
 ```
 
 GW will advertise this minimal set of routes:
@@ -119,14 +123,16 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-      as:
-        - cidr: 1.2.3.0/24
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as:
+            - cidr: 1.2.3.0/24
     external-1:
-      ips: # TODO we need to support ge/le e.g. to allow more specific routes while filtering the bigger ones
-        - not: 10.0.0.0/8
-        - not: 192.168.0.0/24
+      expose:
+        - ips: # TODO we need to support ge/le e.g. to allow more specific routes while filtering the bigger ones
+            - not: 10.0.0.0/8
+            - not: 192.168.0.0/24
 ```
 
 GW will advertise this minimal set of routes:
@@ -167,18 +173,20 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-      as: # Means static Src/Dst NAT for vpc1
-        - 192.168.1.0/24
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as: # Means static Src/Dst NAT for vpc1
+            - cidr: 192.168.1.0/24
       ingress:
         - allow:
             stateless: true # it's the only options supported in the first release
             tcp:
               dstPort: 443
     vpc-2:
-      ips:
-        - cidr: 10.2.1.1/32
+      expose:
+        - ips:
+            - cidr: 10.2.1.1/32
       ingress:
         - allow:
             stateless: true
@@ -198,15 +206,17 @@ metadata:
 spec:
   peering:
     vpc-e1:
-      ips:
-        - not: 10.0.0.0/8
-        - not: 192.168.0.0/16
-        - not: 1.2.3.0/24
+      expose:
+        - ips:
+            - not: 10.0.0.0/8
+            - not: 192.168.0.0/16
+            - not: 1.2.3.0/24
     vpc-e2:
-      ips:
-        - not: 10.0.0.0/8
-        - not: 192.168.0.0/16
-        - not: 3.2.1.0/30
+      expose:
+        - ips:
+            - not: 10.0.0.0/8
+            - not: 192.168.0.0/16
+            - not: 3.2.1.0/30
 ```
 
 ```yaml
@@ -218,16 +228,18 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-      as:
-        - 192.168.1.0/30
-      natType: stateful # as there are not enough IPs in the "as" pool
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as:
+            - cidr: 192.168.1.0/30
+          natType: stateful # as there are not enough IPs in the "as" pool
     vpc-e1:
-      ips:
-        - not: 10.0.0.0/8
-        - not: 192.168.0.0/16
-        - not: 3.2.1.0/30
+      expose:
+        - ips:
+            - not: 10.0.0.0/8
+            - not: 192.168.0.0/16
+            - not: 3.2.1.0/30
 ```
 
 ```yaml
@@ -239,18 +251,20 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-      as:
-        - 192.168.1.0/30
-      natType: stateful
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as:
+            - cidr: 192.168.1.0/30
+          natType: stateful
     vpc-e1:
-      metric: 0 # add 0 to the advertised route metrics
-      # At what point do we not advertise these routes to the switch, how do we decide?
-      ips:
-        - not: 10.0.0.0/8
-        - not: 192.168.0.0/16
-        - not: 1.2.3.0/30
+      expose:
+        - metric: 0 # add 0 to the advertised route metrics
+          # At what point do we not advertise these routes to the switch, how do we decide?
+          ips:
+            - not: 10.0.0.0/8
+            - not: 192.168.0.0/16
+            - not: 1.2.3.0/30
 ---
 apiVersion: gateway.githedgehog.com/v1alpha1
 kind: Peering
@@ -259,16 +273,18 @@ metadata:
 spec:
   peering:
     vpc-1:
-      ips:
-        - cidr: 10.1.1.0/24
-      as:
-        - 192.168.1.0/30
-      natType: stateful
+      expose:
+        - ips:
+            - cidr: 10.1.1.0/24
+          as:
+            - cidr: 192.168.1.0/30
+          natType: stateful
     vpc-e2:
-      metric: 10 # add 10 to the route metric advertised externally
-      # At what point do we not advertise these routes to the switch, how do we decide?
-      ips:
-        - not: 10.0.0.0/8
-        - not: 192.168.0.0/16
-        - not: 3.2.1.0/30
+      expose:
+        - metric: 10 # add 10 to the route metric advertised externally
+          # At what point do we not advertise these routes to the switch, how do we decide?
+          ips:
+            - not: 10.0.0.0/8
+            - not: 192.168.0.0/16
+            - not: 3.2.1.0/30
 ```

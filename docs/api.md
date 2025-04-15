@@ -92,8 +92,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ips` _[PeeringEntryIP](#peeringentryip) array_ |  |  |  |
-| `as` _[PeeringEntryAs](#peeringentryas) array_ |  |  |  |
+| `expose` _[PeeringEntryExpose](#peeringentryexpose) array_ |  |  |  |
 | `ingress` _[PeeringEntryIngress](#peeringentryingress) array_ |  |  |  |
 
 
@@ -106,12 +105,29 @@ _Appears in:_
 
 
 _Appears in:_
-- [PeeringEntry](#peeringentry)
+- [PeeringEntryExpose](#peeringentryexpose)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `cidr` _string_ |  |  |  |
 | `not` _string_ |  |  |  |
+
+
+#### PeeringEntryExpose
+
+
+
+
+
+
+
+_Appears in:_
+- [PeeringEntry](#peeringentry)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ips` _[PeeringEntryIP](#peeringentryip) array_ |  |  |  |
+| `as` _[PeeringEntryAs](#peeringentryas) array_ |  |  |  |
 
 
 #### PeeringEntryIP
@@ -123,7 +139,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [PeeringEntry](#peeringentry)
+- [PeeringEntryExpose](#peeringentryexpose)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
