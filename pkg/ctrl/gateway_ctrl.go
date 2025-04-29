@@ -11,6 +11,7 @@ import (
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
+	"go.githedgehog.com/gateway/pkg/version"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -279,6 +280,12 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 					Spec: corev1.PodSpec{
 						NodeName:           gw.Name,
 						ServiceAccountName: saName,
+						InitContainers: []corev1.Container{ // TODO move to containers when implemented
+							{
+								Name:  "agent-test",
+								Image: "172.30.0.1:31000/githedgehog/gateway/gateway-agent:" + version.Version, // TODO actuall image
+							},
+						},
 						Containers: []corev1.Container{
 							{
 								Name:    "agent",
