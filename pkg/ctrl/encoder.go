@@ -25,8 +25,8 @@ func init() {
 }
 
 var (
-	ErrInalidEncoder = errors.New("invalid encoder")
-	ErrTooLarge      = errors.New("value is too large")
+	ErrInvalidEncoder = errors.New("invalid encoder")
+	ErrTooLarge       = errors.New("value is too large")
 )
 
 type PaddedEncoder struct {
@@ -34,16 +34,30 @@ type PaddedEncoder struct {
 	alphabetLength uint32
 	length         int
 	maxValue       uint32
+	decoderMap     [256]uint8
 }
 
 func NewPaddedEncoder(alphabet string, length int) (*PaddedEncoder, error) {
 	if length < 2 {
-		return nil, fmt.Errorf("%w: length %d < 2", ErrInalidEncoder, length)
+		return nil, fmt.Errorf("%w: length %d < 2", ErrInvalidEncoder, length)
 	}
 
 	maxValue := math.Pow(float64(len(alphabet)), float64(length)) - 1
 	if maxValue > math.MaxUint32 {
-		return nil, fmt.Errorf("%w: encoder max value %f > uint32 max value %d", ErrInalidEncoder, maxValue, math.MaxUint32)
+		return nil, fmt.Errorf("%w: encoder max value %f > uint32 max value %d", ErrInvalidEncoder, maxValue, math.MaxUint32)
+	}
+
+	if len(alphabet) > math.MaxUint8 {
+		return nil, fmt.Errorf("%w: alphabet length %d > 255", ErrInvalidEncoder, len(alphabet))
+	}
+
+	decoderMap := [256]uint8{}
+	for idx, r := range alphabet {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') {
+			return nil, fmt.Errorf("%w: invalid character %c in alphabet", ErrInvalidEncoder, r)
+		}
+
+		decoderMap[r] = uint8(idx) //nolint:gosec
 	}
 
 	return &PaddedEncoder{
@@ -51,6 +65,7 @@ func NewPaddedEncoder(alphabet string, length int) (*PaddedEncoder, error) {
 		alphabetLength: uint32(len(alphabet)), //nolint:gosec
 		length:         length,
 		maxValue:       uint32(maxValue),
+		decoderMap:     decoderMap,
 	}, nil
 }
 
@@ -70,6 +85,22 @@ func (pe *PaddedEncoder) Encode(val uint32) (string, error) {
 	}
 
 	return idStr, nil
+}
+
+func (pe *PaddedEncoder) Decode(idStr string) (uint32, error) {
+	if len(idStr) != pe.length {
+		return 0, fmt.Errorf("%w: invalid length %d, expected %d", ErrInvalidEncoder, len(idStr), pe.length)
+	}
+
+	val := uint32(0)
+	for _, r := range idStr {
+		if r >= 256 || pe.decoderMap[r] == 0 && r != rune(pe.alphabet[0]) {
+			return 0, fmt.Errorf("%w: invalid character %c", ErrInvalidEncoder, r)
+		}
+		val = val*pe.alphabetLength + uint32(pe.decoderMap[r])
+	}
+
+	return val, nil
 }
 
 func (pe *PaddedEncoder) GetMaxValue() uint32 {

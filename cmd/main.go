@@ -116,18 +116,21 @@ func run() error {
 		return fmt.Errorf("creating manager: %w", err)
 	}
 
+	// Controllers
 	if err := ctrl.SetupGatewayReconcilerWith(mgr); err != nil {
 		return fmt.Errorf("setting up gateway controller: %w", err)
 	}
+	if err := ctrl.SetupVPCInfoReconcilerWith(mgr); err != nil {
+		return fmt.Errorf("setting up vpcinfo controller: %w", err)
+	}
 
+	// Webhooks
 	if err := ctrl.SetupGatewayWebhookWith(mgr); err != nil {
 		return fmt.Errorf("setting up gateway webhook: %w", err)
 	}
-
 	if err := ctrl.SetupPeeringWebhookWith(mgr); err != nil {
 		return fmt.Errorf("setting up peering webhook: %w", err)
 	}
-
 	if err := ctrl.SetupVPCInfoWebhookWith(mgr); err != nil {
 		return fmt.Errorf("setting up vpcinfo webhook: %w", err)
 	}

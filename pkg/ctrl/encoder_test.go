@@ -54,3 +54,48 @@ func TestEncodeVPCID(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeVPCID(t *testing.T) {
+	for _, tt := range []struct {
+		id       string
+		expected uint32
+		err      bool
+	}{
+		{"00000", 0, false},
+		{"00001", 1, false},
+		{"00002", 2, false},
+		{"00009", 9, false},
+		{"0000a", 10, false},
+		{"0000b", 11, false},
+		{"0000c", 12, false},
+		{"0000x", 33, false},
+		{"0000y", 34, false},
+		{"0000z", 35, false},
+		{"0000A", 36, false},
+		{"0000B", 37, false},
+		{"0000C", 38, false},
+		{"0000X", 59, false},
+		{"0000Y", 60, false},
+		{"0000Z", 61, false},
+		{"00010", 62, false},
+		{"00011", 63, false},
+		{"00012", 64, false},
+		{"000ZZ", 3843, false},
+		{"00100", 3844, false},
+		{"ZZZZZ", 916132831, false},
+		{"ZZZZZZ", 0, true},
+		{"", 0, true},
+		{"0", 0, true},
+	} {
+		t.Run(fmt.Sprintf("id-%s", tt.id), func(t *testing.T) {
+			got, err := VPCID.Decode(tt.id)
+			if tt.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}

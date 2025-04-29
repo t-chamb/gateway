@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
@@ -104,9 +105,10 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 	vpcs := map[string]gwintapi.VPCInfoData{}
 	for _, vpc := range vpcList.Items {
 		if !vpc.IsReady() {
-			l.Info("VPCInfo not ready, skipping", "name", vpc.Name, "namespace", vpc.Namespace)
+			l.Info("VPCInfo not ready, retrying", "name", vpc.Name, "namespace", vpc.Namespace)
 
-			continue
+			// TODO consider ignoring non-ready VPCs
+			return kctrl.Result{Requeue: true, RequeueAfter: 1 * time.Second}, nil
 		}
 		vpcs[vpc.Name] = gwintapi.VPCInfoData{
 			VPCInfoSpec:   vpc.Spec,
@@ -120,6 +122,14 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 	}
 	peerings := map[string]gwapi.PeeringSpec{}
 	for _, peering := range peeringList.Items {
+		for peerVPC := range peering.Spec.Peering {
+			if _, exists := vpcs[peerVPC]; !exists {
+				l.Info("Peering VPC not found, skipping", "name", peering.Name, "namespace", peering.Namespace, "vpc", peerVPC)
+
+				continue
+			}
+		}
+
 		peerings[peering.Name] = peering.Spec
 	}
 

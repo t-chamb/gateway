@@ -42,6 +42,7 @@ rules:
   - gateway.githedgehog.com
   resources:
   - gateways/status
+  - vpcinfoes/status
   verbs:
   - get
   - patch

@@ -19,7 +19,14 @@ spec:
     singular: vpcinfo
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.internalID
+      name: InternalID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: VPCInfo is the Schema for the vpcinfoes API.
