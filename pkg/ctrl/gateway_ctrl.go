@@ -11,10 +11,13 @@ import (
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	kctrl "sigs.k8s.io/controller-runtime"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -81,6 +84,8 @@ func (r *GatewayReconciler) enqueueAllGateways(ctx context.Context, obj kclient.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (kctrl.Result, error) {
 	l := kctrllog.FromContext(ctx)
 
+	// TODO gateway should only be accepted in the fab namespace
+
 	gw := &gwapi.Gateway{}
 	if err := r.Get(ctx, req.NamespacedName, gw); err != nil {
 		return kctrl.Result{}, fmt.Errorf("getting gateway: %w", err)
@@ -93,10 +98,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 	}
 
 	l.Info("Reconciling Gateway", "name", req.Name, "namespace", req.Namespace)
-
-	if err := r.prepareAgentInfra(ctx, gw); err != nil {
-		return kctrl.Result{}, fmt.Errorf("preparing agent infra: %w", err)
-	}
 
 	vpcList := &gwapi.VPCInfoList{}
 	if err := r.List(ctx, vpcList); err != nil {
@@ -149,6 +150,10 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 		return kctrl.Result{}, fmt.Errorf("creating or updating gateway agent: %w", err)
 	}
 
+	if err := r.deployGateway(ctx, gw); err != nil {
+		return kctrl.Result{}, fmt.Errorf("deploying gateway: %w", err)
+	}
+
 	return kctrl.Result{}, nil
 }
 
@@ -160,57 +165,235 @@ func entityName(gwName string, t ...string) string {
 	return fmt.Sprintf("gw--%s--%s", gwName, strings.Join(t, "-"))
 }
 
-func (r *GatewayReconciler) prepareAgentInfra(ctx context.Context, gw *gwapi.Gateway) error {
-	name := entityName(gw.Name)
+func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway) error {
+	saName := entityName(gw.Name)
 
-	sa := &corev1.ServiceAccount{ObjectMeta: kmetav1.ObjectMeta{Namespace: gw.Namespace, Name: name}}
-	_, err := ctrlutil.CreateOrUpdate(ctx, r.Client, sa, func() error { return nil })
-	if err != nil {
-		return fmt.Errorf("creating service account: %w", err)
+	{
+		sa := &corev1.ServiceAccount{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      saName,
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, sa, func() error { return nil }); err != nil {
+			return fmt.Errorf("creating service account: %w", err)
+		}
+
+		role := &rbacv1.Role{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      saName,
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, role, func() error {
+			if err := ctrlutil.SetControllerReference(gw, role, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			role.Rules = []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{gwintapi.GroupVersion.Group},
+					Resources:     []string{"gatewayagents"},
+					ResourceNames: []string{gw.Name},
+					Verbs:         []string{"get", "watch"},
+				},
+				{
+					APIGroups:     []string{gwintapi.GroupVersion.Group},
+					Resources:     []string{"gatewayagents/status"},
+					ResourceNames: []string{gw.Name},
+					Verbs:         []string{"get", "update", "patch"},
+				},
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating role: %w", err)
+		}
+
+		roleBinding := &rbacv1.RoleBinding{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      saName,
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, roleBinding, func() error {
+			if err := ctrlutil.SetControllerReference(gw, roleBinding, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			roleBinding.Subjects = []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      sa.Name,
+					Namespace: sa.Namespace,
+				},
+			}
+			roleBinding.RoleRef = rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating role binding: %w", err)
+		}
 	}
 
-	role := &rbacv1.Role{ObjectMeta: kmetav1.ObjectMeta{Namespace: gw.Namespace, Name: name}}
-	_, err = ctrlutil.CreateOrUpdate(ctx, r.Client, role, func() error {
-		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups:     []string{gwintapi.GroupVersion.Group},
-				Resources:     []string{"gatewayagents"},
-				ResourceNames: []string{gw.Name},
-				Verbs:         []string{"get", "watch"},
-			},
-			{
-				APIGroups:     []string{gwintapi.GroupVersion.Group},
-				Resources:     []string{"gatewayagents/status"},
-				ResourceNames: []string{gw.Name},
-				Verbs:         []string{"get", "update", "patch"},
-			},
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("creating role: %w", err)
+	tolerations := []corev1.Toleration{
+		{
+			Key:      "role.fabricator.githedgehog.com/gateway", // TODO dedup with the fabricator
+			Operator: corev1.TolerationOpExists,
+			Effect:   corev1.TaintEffectNoExecute,
+		},
+	}
+	replaceUpdateStrategy := appv1.DaemonSetUpdateStrategy{
+		Type: appv1.RollingUpdateDaemonSetStrategyType,
+		RollingUpdate: &appv1.RollingUpdateDaemonSet{
+			MaxUnavailable: ptr.To(intstr.FromInt(1)),
+			MaxSurge:       ptr.To(intstr.FromInt(0)),
+		},
 	}
 
-	roleBinding := &rbacv1.RoleBinding{ObjectMeta: kmetav1.ObjectMeta{Namespace: gw.Namespace, Name: name}}
-	_, err = ctrlutil.CreateOrUpdate(ctx, r.Client, roleBinding, func() error {
-		roleBinding.Subjects = []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		}
-		roleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
-		}
+	// TODO we need to pass tolerations and image references to the gateway from the fabricator
 
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("creating role binding: %w", err)
+	{
+		agDS := &appv1.DaemonSet{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      entityName(gw.Name, "agent"),
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, agDS, func() error {
+			if err := ctrlutil.SetControllerReference(gw, agDS, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			labels := map[string]string{
+				"app.kubernetes.io/name": agDS.Name, // TODO
+			}
+
+			agDS.Spec = appv1.DaemonSetSpec{
+				Selector: &kmetav1.LabelSelector{
+					MatchLabels: labels,
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: kmetav1.ObjectMeta{
+						Labels: labels,
+					},
+					Spec: corev1.PodSpec{
+						NodeName:           gw.Name,
+						ServiceAccountName: saName,
+						Containers: []corev1.Container{
+							{
+								Name:    "agent",
+								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest", // TODO actuall image
+								Command: []string{"/bin/bash", "-c", "--"},
+								Args:    []string{"while true; echo 'Welcome to agent'; do sleep 60; done;"},
+							},
+						},
+						HostNetwork:                   true,
+						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)), // TODO tune
+						Tolerations:                   tolerations,
+					},
+				},
+				UpdateStrategy: replaceUpdateStrategy,
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating or updating gateway agent daemonset: %w", err)
+		}
+	}
+
+	{
+		dpDS := &appv1.DaemonSet{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      entityName(gw.Name, "dataplane"),
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, dpDS, func() error {
+			if err := ctrlutil.SetControllerReference(gw, dpDS, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			labels := map[string]string{
+				"app.kubernetes.io/name": dpDS.Name, // TODO
+			}
+
+			dpDS.Spec = appv1.DaemonSetSpec{
+				Selector: &kmetav1.LabelSelector{
+					MatchLabels: labels,
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: kmetav1.ObjectMeta{
+						Labels: labels,
+					},
+					Spec: corev1.PodSpec{
+						NodeName: gw.Name,
+						Containers: []corev1.Container{
+							{
+								Name:    "dataplane",
+								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest", // TODO actuall image
+								Command: []string{"/bin/bash", "-c", "--"},
+								Args:    []string{"while true; echo 'Welcome to dataplane'; do sleep 60; done;"},
+							},
+						},
+						HostNetwork:                   true,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)), // TODO tune
+						Tolerations:                   tolerations,
+					},
+				},
+				UpdateStrategy: replaceUpdateStrategy,
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating or updating gateway dataplane daemonset: %w", err)
+		}
+	}
+
+	{
+		frrDS := &appv1.DaemonSet{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      entityName(gw.Name, "frr"),
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, frrDS, func() error {
+			if err := ctrlutil.SetControllerReference(gw, frrDS, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			labels := map[string]string{
+				"app.kubernetes.io/name": frrDS.Name, // TODO
+			}
+
+			frrDS.Spec = appv1.DaemonSetSpec{
+				Selector: &kmetav1.LabelSelector{
+					MatchLabels: labels,
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: kmetav1.ObjectMeta{
+						Labels: labels,
+					},
+					Spec: corev1.PodSpec{
+						NodeName: gw.Name,
+						Containers: []corev1.Container{
+							{
+								Name:    "frr",
+								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest", // TODO actuall image
+								Command: []string{"/bin/bash", "-c", "--"},
+								Args:    []string{"while true; echo 'Welcome to frr'; do sleep 60; done;"},
+							},
+						},
+						HostNetwork:                   true,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)), // TODO tune
+						Tolerations:                   tolerations,
+					},
+				},
+				UpdateStrategy: replaceUpdateStrategy,
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating or updating gateway frr daemonset: %w", err)
+		}
 	}
 
 	return nil
