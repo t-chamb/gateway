@@ -5,9 +5,21 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - gateway.githedgehog.com
+  - ""
   resources:
-  - gateways
+  - serviceaccounts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
   verbs:
   - create
   - delete
@@ -19,9 +31,13 @@ rules:
 - apiGroups:
   - gateway.githedgehog.com
   resources:
-  - gateways/finalizers
+  - gateways
+  - peerings
+  - vpcinfoes
   verbs:
-  - update
+  - get
+  - list
+  - watch
 - apiGroups:
   - gateway.githedgehog.com
   resources:
@@ -31,11 +47,41 @@ rules:
   - patch
   - update
 - apiGroups:
-  - gateway.githedgehog.com
+  - gwint.githedgehog.com
   resources:
-  - peerings
-  - vpcinfoes
+  - gatewayagents
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gwint.githedgehog.com
+  resources:
+  - gatewayagents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gwint.githedgehog.com
+  resources:
+  - gatewayagents/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch

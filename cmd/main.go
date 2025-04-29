@@ -17,8 +17,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
-	"go.githedgehog.com/gateway/pkg/ctrl"
-	"go.githedgehog.com/gateway/pkg/version"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -28,7 +26,11 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"go.githedgehog.com/gateway/pkg/ctrl"
+	"go.githedgehog.com/gateway/pkg/version"
+
 	gatewayv1alpha1 "go.githedgehog.com/gateway/api/gateway/v1alpha1"
+	gwintv1alpha1 "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -38,6 +40,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(gatewayv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(gwintv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

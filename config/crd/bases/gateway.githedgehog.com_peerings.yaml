@@ -8,9 +8,14 @@ metadata:
 spec:
   group: gateway.githedgehog.com
   names:
+    categories:
+    - hedgehog
+    - hedgehog-gateway
     kind: Peering
     listKind: PeeringList
     plural: peerings
+    shortNames:
+    - peer
     singular: peering
   scope: Namespaced
   versions:

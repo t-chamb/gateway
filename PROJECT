@@ -46,4 +46,12 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: githedgehog.com
+  group: gwint
+  kind: GatewayAgent
+  path: go.githedgehog.com/gateway/api/gwint/v1alpha1
+  version: v1alpha1
 version: "3"
