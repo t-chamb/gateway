@@ -11,10 +11,12 @@ import (
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
-	"go.githedgehog.com/gateway/pkg/version"
+	"go.githedgehog.com/gateway/api/meta"
+	"go.githedgehog.com/gateway/pkg/agent"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -25,6 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	kctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	kyaml "sigs.k8s.io/yaml"
+)
+
+const (
+	configVolume = "config"
 )
 
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents,verbs=get;list;watch;create;update;patch;delete
@@ -37,17 +44,24 @@ import (
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=peerings,verbs=get;list;watch
 
 // +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 
 type GatewayReconciler struct {
 	kclient.Client
+	cfg *meta.GatewayCtrlConfig
 }
 
-func SetupGatewayReconcilerWith(mgr kctrl.Manager) error {
+func SetupGatewayReconcilerWith(mgr kctrl.Manager, cfg *meta.GatewayCtrlConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("gateway controller config is nil") //nolint:goerr113
+	}
+
 	r := &GatewayReconciler{
 		Client: mgr.GetClient(),
+		cfg:    cfg,
 	}
 
 	if err := kctrl.NewControllerManagedBy(mgr).
@@ -85,10 +99,18 @@ func (r *GatewayReconciler) enqueueAllGateways(ctx context.Context, obj kclient.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (kctrl.Result, error) {
 	l := kctrllog.FromContext(ctx)
 
-	// TODO gateway should only be accepted in the fab namespace
+	if req.Namespace != r.cfg.Namespace {
+		l.Info("Skipping Gateway in unexpected namespace", "name", req.Name, "namespace", req.Namespace)
+
+		return kctrl.Result{}, nil
+	}
 
 	gw := &gwapi.Gateway{}
 	if err := r.Get(ctx, req.NamespacedName, gw); err != nil {
+		if !kapierrors.IsNotFound(err) {
+			return kctrl.Result{}, nil
+		}
+
 		return kctrl.Result{}, fmt.Errorf("getting gateway: %w", err)
 	}
 
@@ -237,13 +259,6 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		}
 	}
 
-	tolerations := []corev1.Toleration{
-		{
-			Key:      "role.fabricator.githedgehog.com/gateway", // TODO dedup with the fabricator
-			Operator: corev1.TolerationOpExists,
-			Effect:   corev1.TaintEffectNoExecute,
-		},
-	}
 	replaceUpdateStrategy := appv1.DaemonSetUpdateStrategy{
 		Type: appv1.RollingUpdateDaemonSetStrategyType,
 		RollingUpdate: &appv1.RollingUpdateDaemonSet{
@@ -252,7 +267,35 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		},
 	}
 
-	// TODO we need to pass tolerations and image references to the gateway from the fabricator
+	{
+		agCfgData, err := kyaml.Marshal(&meta.AgentConfig{
+			Name:             gw.Name,
+			Namespace:        gw.Namespace,
+			DataplaneAddress: "unix:///tmp/gateway-dataplane.sock", // TODO
+		})
+		if err != nil {
+			return fmt.Errorf("marshalling agent config: %w", err)
+		}
+
+		agCM := &corev1.ConfigMap{ObjectMeta: kmetav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      entityName(gw.Name, "agent"),
+		}}
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, agCM, func() error {
+			if err := ctrlutil.SetControllerReference(gw, agCM, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			agCM.Data = map[string]string{
+				agent.ConfigFile: string(agCfgData),
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating or updating gateway agent configmap: %w", err)
+		}
+	}
 
 	{
 		agDS := &appv1.DaemonSet{ObjectMeta: kmetav1.ObjectMeta{
@@ -280,24 +323,41 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 					Spec: corev1.PodSpec{
 						NodeName:           gw.Name,
 						ServiceAccountName: saName,
-						InitContainers: []corev1.Container{ // TODO move to containers when implemented
-							{
-								Name:  "agent-test",
-								Image: "172.30.0.1:31000/githedgehog/gateway/gateway-agent:" + version.Version, // TODO actuall image
-							},
-						},
 						Containers: []corev1.Container{
 							{
-								Name:    "agent",
-								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest", // TODO actuall image
+								Name:  "agent",
+								Image: r.cfg.AgentRef,
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      configVolume,
+										MountPath: agent.ConfigDir,
+										ReadOnly:  true,
+									},
+								},
+							},
+							{ // TODO remove
+								Name:    "toolbox",
+								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest",
 								Command: []string{"/bin/bash", "-c", "--"},
 								Args:    []string{"while true; echo 'Welcome to agent'; do sleep 60; done;"},
 							},
 						},
 						HostNetwork:                   true,
 						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
-						TerminationGracePeriodSeconds: ptr.To(int64(10)), // TODO tune
-						Tolerations:                   tolerations,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Tolerations:                   r.cfg.Tolerations,
+						Volumes: []corev1.Volume{
+							{
+								Name: configVolume,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: entityName(gw.Name, "agent"),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				UpdateStrategy: replaceUpdateStrategy,
@@ -337,14 +397,14 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Containers: []corev1.Container{
 							{
 								Name:    "dataplane",
-								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest", // TODO actuall image
-								Command: []string{"/bin/bash", "-c", "--"},
-								Args:    []string{"while true; echo 'Welcome to dataplane'; do sleep 60; done;"},
+								Image:   r.cfg.DataplaneRef,
+								Command: []string{"/bin/bash", "-c", "--"},                                       // TODO remove
+								Args:    []string{"while true; echo 'Welcome to dataplane'; do sleep 60; done;"}, // TODO remove
 							},
 						},
 						HostNetwork:                   true,
-						TerminationGracePeriodSeconds: ptr.To(int64(10)), // TODO tune
-						Tolerations:                   tolerations,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Tolerations:                   r.cfg.Tolerations,
 					},
 				},
 				UpdateStrategy: replaceUpdateStrategy,
@@ -384,14 +444,14 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Containers: []corev1.Container{
 							{
 								Name:    "frr",
-								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest", // TODO actuall image
-								Command: []string{"/bin/bash", "-c", "--"},
-								Args:    []string{"while true; echo 'Welcome to frr'; do sleep 60; done;"},
+								Image:   r.cfg.FRRRef,
+								Command: []string{"/bin/bash", "-c", "--"},                                 // TODO remove
+								Args:    []string{"while true; echo 'Welcome to frr'; do sleep 60; done;"}, // TODO remove
 							},
 						},
 						HostNetwork:                   true,
-						TerminationGracePeriodSeconds: ptr.To(int64(10)), // TODO tune
-						Tolerations:                   tolerations,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Tolerations:                   r.cfg.Tolerations,
 					},
 				},
 				UpdateStrategy: replaceUpdateStrategy,

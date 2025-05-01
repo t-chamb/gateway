@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kctrl "sigs.k8s.io/controller-runtime"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 	kctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,6 +41,10 @@ func (r *VPCInfoReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 
 	vpc := &gwapi.VPCInfo{}
 	if err := r.Get(ctx, req.NamespacedName, vpc); err != nil {
+		if !kapierrors.IsNotFound(err) {
+			return kctrl.Result{}, nil
+		}
+
 		return kctrl.Result{}, fmt.Errorf("getting vpc info: %w", err)
 	}
 

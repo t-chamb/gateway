@@ -25,12 +25,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	kyaml "sigs.k8s.io/yaml"
 
 	"go.githedgehog.com/gateway/pkg/ctrl"
 	"go.githedgehog.com/gateway/pkg/version"
 
 	gatewayv1alpha1 "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintv1alpha1 "go.githedgehog.com/gateway/api/gwint/v1alpha1"
+	"go.githedgehog.com/gateway/api/meta"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -68,6 +70,15 @@ func main() {
 
 func run() error {
 	slog.Info("Starting gateway-ctrl", "version", version.Version)
+
+	cfgData, err := os.ReadFile("/etc/hedgehog/gateway-ctrl/config.yaml")
+	if err != nil {
+		return fmt.Errorf("reading config file: %w", err)
+	}
+	cfg := &meta.GatewayCtrlConfig{}
+	if err := kyaml.Unmarshal(cfgData, cfg); err != nil {
+		return fmt.Errorf("unmarshalling config file: %w", err)
+	}
 
 	// Disabling http/2 will prevent from being vulnerable to the HTTP/2 Stream Cancellation and Rapid Reset CVEs.
 	// For more information see:
@@ -117,7 +128,7 @@ func run() error {
 	}
 
 	// Controllers
-	if err := ctrl.SetupGatewayReconcilerWith(mgr); err != nil {
+	if err := ctrl.SetupGatewayReconcilerWith(mgr, cfg); err != nil {
 		return fmt.Errorf("setting up gateway controller: %w", err)
 	}
 	if err := ctrl.SetupVPCInfoReconcilerWith(mgr); err != nil {

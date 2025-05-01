@@ -85,4 +85,4 @@ test-api: _helm-gateway-api
 
 # Patch deployment using the default kubeconfig (KUBECONFIG env or ~/.kube/config)
 patch: && version
-  kubectl -n fab patch fab/default --type=merge -p '{"spec":{"overrides":{"versions":{"gateway":{"api":"{{version}}","controller":"{{version}}"}}}}}'
+  kubectl -n fab patch fab/default --type=merge -p '{"spec":{"overrides":{"versions":{"gateway":{"api":"{{version}}","controller":"{{version}}","agent":"{{version}}"}}}}}'

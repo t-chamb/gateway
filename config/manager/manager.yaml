@@ -92,7 +92,14 @@ spec:
             requests:
               cpu: 10m
               memory: 64Mi
-          volumeMounts: []
-      volumes: []
+          volumeMounts:
+            - name: config
+              mountPath: /etc/hedgehog/gateway-ctrl
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            # TODO it shouldn't be static, prefixName should be used?
+            name: gateway-ctrl-config
       serviceAccountName: ctrl
       terminationGracePeriodSeconds: 10
