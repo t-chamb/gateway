@@ -6,6 +6,7 @@ package ctrl
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,7 +32,10 @@ import (
 )
 
 const (
-	configVolume = "config"
+	configVolumeName    = "config"
+	socketVolumeName    = "socket"
+	gatewaySocketDir    = "/tmp/gateway"
+	dataplaneSockerName = "dataplane.sock"
 )
 
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents,verbs=get;list;watch;create;update;patch;delete
@@ -267,11 +271,25 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		},
 	}
 
+	socketVolume := corev1.Volume{
+		Name: socketVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: gatewaySocketDir,
+				Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+			},
+		},
+	}
+	socketVolumeMount := corev1.VolumeMount{
+		Name:      socketVolumeName,
+		MountPath: gatewaySocketDir,
+	}
+
 	{
 		agCfgData, err := kyaml.Marshal(&meta.AgentConfig{
 			Name:             gw.Name,
 			Namespace:        gw.Namespace,
-			DataplaneAddress: "unix:///tmp/gateway-dataplane.sock", // TODO
+			DataplaneAddress: "unix://" + filepath.Join(gatewaySocketDir, dataplaneSockerName),
 		})
 		if err != nil {
 			return fmt.Errorf("marshalling agent config: %w", err)
@@ -328,18 +346,17 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								Name:  "agent",
 								Image: r.cfg.AgentRef,
 								VolumeMounts: []corev1.VolumeMount{
+									socketVolumeMount,
 									{
-										Name:      configVolume,
+										Name:      configVolumeName,
 										MountPath: agent.ConfigDir,
 										ReadOnly:  true,
 									},
 								},
-							},
-							{ // TODO remove
-								Name:    "toolbox",
-								Image:   "172.30.0.1:31000/githedgehog/toolbox:latest",
-								Command: []string{"/bin/bash", "-c", "--"},
-								Args:    []string{"while true; echo 'Welcome to agent'; do sleep 60; done;"},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
 							},
 						},
 						HostNetwork:                   true,
@@ -347,8 +364,9 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						TerminationGracePeriodSeconds: ptr.To(int64(10)),
 						Tolerations:                   r.cfg.Tolerations,
 						Volumes: []corev1.Volume{
+							socketVolume,
 							{
-								Name: configVolume,
+								Name: configVolumeName,
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
@@ -396,15 +414,25 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						NodeName: gw.Name,
 						Containers: []corev1.Container{
 							{
-								Name:    "dataplane",
-								Image:   r.cfg.DataplaneRef,
-								Command: []string{"/bin/bash", "-c", "--"},                                       // TODO remove
-								Args:    []string{"while true; echo 'Welcome to dataplane'; do sleep 60; done;"}, // TODO remove
+								Name:  "dataplane",
+								Image: r.cfg.DataplaneRef,
+								// TODO replace with actual args
+								Args: []string{"server", "-t", "unix://" + filepath.Join(gatewaySocketDir, dataplaneSockerName)},
+								VolumeMounts: []corev1.VolumeMount{
+									socketVolumeMount,
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
 							},
 						},
 						HostNetwork:                   true,
 						TerminationGracePeriodSeconds: ptr.To(int64(10)),
 						Tolerations:                   r.cfg.Tolerations,
+						Volumes: []corev1.Volume{
+							socketVolume,
+						},
 					},
 				},
 				UpdateStrategy: replaceUpdateStrategy,

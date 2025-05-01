@@ -91,7 +91,7 @@ func Run(ctx context.Context) error {
 				switch event.Type {
 				case watch.Added, watch.Modified:
 					// TODO store previous state?
-					if err := handleAgent(ctx, event.Object.(*gwintapi.GatewayAgent)); err != nil {
+					if err := handleAgent(ctx, cfg, event.Object.(*gwintapi.GatewayAgent)); err != nil {
 						slog.Error("Error handling agent", "error", err)
 
 						return fmt.Errorf("handling agent: %w", err)
@@ -139,7 +139,10 @@ func newKubeClient(schemeBuilders ...*scheme.Builder) (kclient.WithWatch, error)
 	return kubeClient, nil
 }
 
-func handleAgent(_ context.Context, ag *gwintapi.GatewayAgent) error {
+func handleAgent(ctx context.Context, cfg *meta.AgentConfig, ag *gwintapi.GatewayAgent) error {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
 	slog.Info("Gateway agent loaded", "name", ag.Name, "ns", ag.Namespace, "uid", ag.UID, "gen", ag.Generation, "res", ag.ResourceVersion)
 
 	for vpcName, vpc := range ag.Spec.VPCs {
@@ -150,8 +153,8 @@ func handleAgent(_ context.Context, ag *gwintapi.GatewayAgent) error {
 		slog.Info("Peering", "name", peeringName, "vpcs", strings.Join(lo.Keys(peering.Peering), ","))
 	}
 
-	// TODO replace with real client
-	conn, err := grpc.NewClient("127.0.0.1:51234",
+	// TODO probably run this in a separate goroutine to keep connection open and react to reconnects
+	conn, err := grpc.NewClient(cfg.DataplaneAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("creating grpc conn: %w", err)
@@ -159,7 +162,27 @@ func handleAgent(_ context.Context, ag *gwintapi.GatewayAgent) error {
 	defer conn.Close()
 
 	client := dataplane.NewConfigServiceClient(conn)
-	_ = client
+
+	{
+		resp, err := client.GetConfigGeneration(ctx, &dataplane.GetConfigGenerationRequest{})
+		if err != nil {
+			return fmt.Errorf("getting config generation: %w", err)
+		}
+		if resp.Generation != uint64(ag.Generation) { //nolint:gosec // TODO fix proto
+			slog.Info("Dataplane config needs to be updated", "current", resp.Generation, "new", ag.Generation)
+
+			resp, err := client.UpdateConfig(ctx, &dataplane.UpdateConfigRequest{})
+			if err != nil {
+				return fmt.Errorf("updating config: %w", err)
+			}
+
+			slog.Info("Dataplane config updated", "gen", ag.Generation, "message", resp.Message, "error", resp.Error)
+
+			if resp.Error != dataplane.Error_ERROR_NONE {
+				return fmt.Errorf("updating config returned error: %s", resp.Error.String()) //nolint:goerr113
+			}
+		}
+	}
 
 	return nil
 }
