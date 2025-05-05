@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: vpcinfoes.gateway.githedgehog.com
+  name: vpcinfos.gateway.githedgehog.com
 spec:
   group: gateway.githedgehog.com
   names:
@@ -13,7 +13,7 @@ spec:
     - hedgehog-gateway
     kind: VPCInfo
     listKind: VPCInfoList
-    plural: vpcinfoes
+    plural: vpcinfos
     shortNames:
     - gwvpc
     singular: vpcinfo

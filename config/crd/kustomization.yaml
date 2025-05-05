@@ -3,7 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/gateway.githedgehog.com_peerings.yaml
-- bases/gateway.githedgehog.com_vpcinfoes.yaml
+- bases/gateway.githedgehog.com_vpcinfos.yaml
 - bases/gateway.githedgehog.com_gateways.yaml
 - bases/gwint.githedgehog.com_gatewayagents.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
