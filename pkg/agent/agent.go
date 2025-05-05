@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -67,7 +68,7 @@ func (svc *Service) Run(ctx context.Context) error {
 		return fmt.Errorf("creating kube client: %w", err)
 	}
 
-	// TODO add wrapper for slog to be used in grpclog.SetLoggerV2
+	grpclog.SetLoggerV2(NewGRPCLogger(slog.Default(), slog.LevelError))
 
 	svc.dpConn, err = grpc.NewClient(svc.cfg.DataplaneAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
