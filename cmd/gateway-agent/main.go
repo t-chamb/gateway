@@ -45,5 +45,5 @@ func Run(ctx context.Context) error {
 
 	slog.Info("Hedgehog Gateway Agent", args...)
 
-	return agent.Run(ctx) //nolint:wrapcheck
+	return agent.New().Run(ctx) //nolint:wrapcheck
 }

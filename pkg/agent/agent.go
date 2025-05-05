@@ -5,20 +5,19 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
 	"os"
-	"slices"
-	"strings"
 	"time"
 
-	"github.com/samber/lo"
 	"go.githedgehog.com/gateway-proto/pkg/dataplane"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	"go.githedgehog.com/gateway/api/meta"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	kctrl "sigs.k8s.io/controller-runtime"
@@ -32,13 +31,25 @@ const (
 	ConfigFile = "config.yaml"
 )
 
-func Run(ctx context.Context) error {
+type Service struct {
+	cfg      *meta.AgentConfig
+	kube     kclient.WithWatch
+	curr     *gwintapi.GatewayAgent
+	dpConn   *grpc.ClientConn
+	dpClient dataplane.ConfigServiceClient
+}
+
+func New() *Service {
+	return &Service{}
+}
+
+func (svc *Service) Run(ctx context.Context) error {
 	cfgData, err := os.ReadFile("/etc/hedgehog/gateway-agent/config.yaml")
 	if err != nil {
 		return fmt.Errorf("reading config file: %w", err)
 	}
-	cfg := &meta.AgentConfig{}
-	if err := kyaml.UnmarshalStrict(cfgData, cfg); err != nil {
+	svc.cfg = &meta.AgentConfig{}
+	if err := kyaml.UnmarshalStrict(cfgData, svc.cfg); err != nil {
 		return fmt.Errorf("unmarshalling config file: %w", err)
 	}
 
@@ -47,75 +58,186 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("getting hostname: %w", err)
 	}
 
-	if cfg.Name != hostname {
-		return fmt.Errorf("agent name %q does not match hostname %q", cfg.Name, hostname) //nolint:err113
+	if svc.cfg.Name != hostname {
+		return fmt.Errorf("agent name %q does not match hostname %q", svc.cfg.Name, hostname) //nolint:err113
 	}
 
-	kube, err := newKubeClient(gwintapi.SchemeBuilder)
+	svc.kube, err = newKubeClient(gwintapi.SchemeBuilder)
 	if err != nil {
 		return fmt.Errorf("creating kube client: %w", err)
 	}
+
+	// TODO add wrapper for slog to be used in grpclog.SetLoggerV2
+
+	svc.dpConn, err = grpc.NewClient(svc.cfg.DataplaneAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+
+		// TODO consider using health check https://grpc.io/docs/guides/health-checking/
+		// grpc.WithDefaultServiceConfig(`"healthCheckConfig": { "serviceName": "" }`),
+
+		// TODO think about backoff
+		// grpc.WithConnectParams(grpc.ConnectParams{
+		// 	Backoff: backoff.Config{},
+		// }),
+
+		// TODO think about keepalive
+		// grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		// 	Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
+		// 	Timeout:             1 * time.Second,  // wait 1 second for ping ack before considering the connection dead
+		// 	PermitWithoutStream: true,             // send pings even without active streams
+		// }),
+	)
+	if err != nil {
+		return fmt.Errorf("creating grpc conn: %w", err)
+	}
+	defer svc.dpConn.Close()
+
+	svc.dpClient = dataplane.NewConfigServiceClient(svc.dpConn)
 
 	retry := false
 	for {
 		if retry {
 			select {
 			case <-ctx.Done():
+				slog.Warn("Context done, stopping")
+
 				return nil
-			case <-time.After(5 * time.Second):
-				// Retry after a delay
+			case <-time.After(1 * time.Second):
+				// Retry watching after a delay
 			}
 
 			slog.Info("Retrying to watch agent object")
 		}
 		retry = true
 
-		watcher, err := kube.Watch(ctx, &gwintapi.GatewayAgentList{},
-			kclient.InNamespace(cfg.Namespace), kclient.MatchingFields{"metadata.name": cfg.Name})
-		if err != nil {
-			return fmt.Errorf("creating watcher: %w", err)
+		if err := svc.watchAgent(ctx); err != nil {
+			return fmt.Errorf("watching agent object: %w", err)
 		}
-		defer watcher.Stop()
+	}
+}
 
-		for {
-			select {
-			case <-ctx.Done():
-				slog.Info("Context done, stopping")
+func (svc *Service) watchAgent(ctx context.Context) error {
+	svc.curr = &gwintapi.GatewayAgent{}
+	if err := svc.kube.Get(ctx, kclient.ObjectKey{
+		Name:      svc.cfg.Name,
+		Namespace: svc.cfg.Namespace,
+	}, svc.curr); err != nil {
+		return fmt.Errorf("getting agent object: %w", err)
+	}
+
+	watcher, err := svc.kube.Watch(ctx, &gwintapi.GatewayAgentList{},
+		kclient.InNamespace(svc.cfg.Namespace), kclient.MatchingFields{"metadata.name": svc.cfg.Name})
+	if err != nil {
+		return fmt.Errorf("creating watcher: %w", err)
+	}
+	defer watcher.Stop()
+
+	enforce := time.NewTicker(5 * time.Second)
+	defer enforce.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case event, ok := <-watcher.ResultChan():
+			if !ok {
+				slog.Warn("Watcher channel closed")
 
 				return nil
-			case event, ok := <-watcher.ResultChan():
-				if !ok {
-					slog.Warn("Watcher channel closed")
+			}
+
+			switch event.Type {
+			case watch.Added, watch.Modified:
+				ag := event.Object.(*gwintapi.GatewayAgent)
+				slog.Info("Handling", "name", ag.Name, "ns", ag.Namespace, "uid", ag.UID, "gen", ag.Generation, "curr", svc.curr.Generation, "res", ag.ResourceVersion)
+
+				if ag.Generation == svc.curr.Generation {
+					svc.curr = ag
 
 					continue
 				}
 
-				switch event.Type {
-				case watch.Added, watch.Modified:
-					// TODO store previous state?
-					if err := handleAgent(ctx, cfg, event.Object.(*gwintapi.GatewayAgent)); err != nil {
-						slog.Error("Error handling agent", "error", err)
+				if err := svc.enforceDataplaneConfig(ctx, ag); err != nil {
+					if status, ok := status.FromError(errors.Unwrap(err)); ok {
+						if status.Code() == codes.Unavailable {
+							slog.Warn("Dataplane unavailable, will retry", "error", status.Message())
 
-						return fmt.Errorf("handling agent: %w", err)
+							continue
+						}
+
+						slog.Warn("Dataplane error, will retry", "error", status.Message())
 					}
-				case watch.Deleted:
-					slog.Warn("Agent object deleted, shutting down")
 
-					return fmt.Errorf("agent object deleted") //nolint:err113
-				case watch.Bookmark:
-					// Ignore bookmark events
-				case watch.Error:
-					slog.Warn("Watcher error", "event", event.Type, "object", event.Object)
-
-					continue
-				default:
-					slog.Warn("Unknown event type", "event", event.Type, "object", event.Object)
-
-					continue
+					return fmt.Errorf("handling agent: %w", err)
 				}
+
+				svc.curr = ag
+			case watch.Deleted:
+				slog.Warn("Agent object deleted, shutting down")
+
+				return fmt.Errorf("agent object deleted") //nolint:err113
+			case watch.Bookmark:
+				// Ignore bookmark events
+			case watch.Error:
+				slog.Warn("Watcher error", "event", event.Type, "object", event.Object)
+
+				return nil
+			default:
+				slog.Warn("Unknown event type", "event", event.Type, "object", event.Object)
+
+				return nil
+			}
+		case <-enforce.C:
+			if err := svc.enforceDataplaneConfig(ctx, svc.curr); err != nil {
+				if status, ok := status.FromError(errors.Unwrap(err)); ok {
+					if status.Code() == codes.Unavailable {
+						slog.Warn("Dataplane unavailable, will retry", "error", status.Message())
+
+						continue
+					}
+
+					slog.Warn("Dataplane error, will retry", "error", status.Message())
+				}
+
+				return fmt.Errorf("enforcing config: %w", err)
 			}
 		}
 	}
+}
+
+func (svc *Service) enforceDataplaneConfig(ctx context.Context, ag *gwintapi.GatewayAgent) error {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	resp, err := svc.dpClient.GetConfigGeneration(ctx, &dataplane.GetConfigGenerationRequest{})
+	if err != nil {
+		return fmt.Errorf("getting config generation: %w", err)
+	}
+	if resp.Generation != uint64(ag.Generation) { //nolint:gosec // TODO fix proto
+		slog.Info("Dataplane config needs to be updated", "current", resp.Generation, "new", ag.Generation)
+
+		gwCfg, err := buildDataplaneConfig(ag)
+		if err != nil {
+			return fmt.Errorf("building dataplane config: %w", err)
+		}
+
+		resp, err := svc.dpClient.UpdateConfig(ctx, &dataplane.UpdateConfigRequest{
+			Config: gwCfg,
+		})
+		if err != nil {
+			return fmt.Errorf("updating config: %w", err)
+		}
+
+		slog.Info("Dataplane config updated", "gen", ag.Generation, "message", resp.Message, "error", resp.Error)
+
+		if resp.Error != dataplane.Error_ERROR_NONE {
+			return fmt.Errorf("updating config returned error: %s", resp.Error.String()) //nolint:goerr113
+		}
+	}
+
+	// TODO report status to the agent object
+
+	return nil
 }
 
 func newKubeClient(schemeBuilders ...*scheme.Builder) (kclient.WithWatch, error) {
@@ -139,169 +261,4 @@ func newKubeClient(schemeBuilders ...*scheme.Builder) (kclient.WithWatch, error)
 	}
 
 	return kubeClient, nil
-}
-
-func handleAgent(ctx context.Context, cfg *meta.AgentConfig, ag *gwintapi.GatewayAgent) error {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	slog.Info("Gateway agent loaded", "name", ag.Name, "ns", ag.Namespace, "uid", ag.UID, "gen", ag.Generation, "res", ag.ResourceVersion)
-
-	for vpcName, vpc := range ag.Spec.VPCs {
-		slog.Info("VPC", "name", vpcName, "internalID", vpc.InternalID)
-	}
-
-	for peeringName, peering := range ag.Spec.Peerings {
-		slog.Info("Peering", "name", peeringName, "vpcs", strings.Join(lo.Keys(peering.Peering), ","))
-	}
-
-	// TODO probably run this in a separate goroutine to keep connection open and react to reconnects
-	conn, err := grpc.NewClient(cfg.DataplaneAddress,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return fmt.Errorf("creating grpc conn: %w", err)
-	}
-	defer conn.Close()
-
-	client := dataplane.NewConfigServiceClient(conn)
-
-	{
-		resp, err := client.GetConfigGeneration(ctx, &dataplane.GetConfigGenerationRequest{})
-		if err != nil {
-			return fmt.Errorf("getting config generation: %w", err)
-		}
-		if resp.Generation != uint64(ag.Generation) { //nolint:gosec // TODO fix proto
-			slog.Info("Dataplane config needs to be updated", "current", resp.Generation, "new", ag.Generation)
-
-			gwCfg, err := buildDataplaneConfig(ag)
-			if err != nil {
-				return fmt.Errorf("building dataplane config: %w", err)
-			}
-
-			resp, err := client.UpdateConfig(ctx, &dataplane.UpdateConfigRequest{
-				Config: gwCfg,
-			})
-			if err != nil {
-				return fmt.Errorf("updating config: %w", err)
-			}
-
-			slog.Info("Dataplane config updated", "gen", ag.Generation, "message", resp.Message, "error", resp.Error)
-
-			if resp.Error != dataplane.Error_ERROR_NONE {
-				return fmt.Errorf("updating config returned error: %s", resp.Error.String()) //nolint:goerr113
-			}
-		}
-	}
-
-	return nil
-}
-
-func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, error) {
-	cfg := &dataplane.GatewayConfig{
-		Generation: uint64(ag.Generation), //nolint:gosec // TODO fix proto
-		Device: &dataplane.Device{
-			Driver:   dataplane.PacketDriver_KERNEL,
-			Hostname: ag.Name,
-			Loglevel: dataplane.LogLevel_DEBUG,
-		},
-		Underlay: &dataplane.Underlay{ // TODO replace with actual generated config
-			Vrf: []*dataplane.VRF{
-				{
-					Name: "default",
-					Interfaces: []*dataplane.Interface{
-						{
-							Name:   "eth0",
-							Ipaddr: "10.0.0.1/32",
-							Type:   dataplane.IfType_IF_TYPE_ETHERNET,
-							Role:   dataplane.IfRole_IF_ROLE_FABRIC,
-						},
-						{
-							Name:   "eth1",
-							Ipaddr: "10.0.0.1/32",
-							Type:   dataplane.IfType_IF_TYPE_ETHERNET,
-							Role:   dataplane.IfRole_IF_ROLE_EXTERNAL,
-						},
-					},
-				},
-			},
-		},
-		Overlay: &dataplane.Overlay{},
-	}
-
-	// TODO do we need to bother with sorting?
-
-	for _, vpcName := range slices.Sorted(maps.Keys(ag.Spec.VPCs)) {
-		vpc := ag.Spec.VPCs[vpcName]
-		cfg.Overlay.Vpcs = append(cfg.Overlay.Vpcs, &dataplane.VPC{
-			Name: vpcName,
-			Id:   vpc.InternalID,
-			Vni:  vpc.VNI,
-		})
-	}
-
-	for _, peeringName := range slices.Sorted(maps.Keys(ag.Spec.Peerings)) {
-		peering := ag.Spec.Peerings[peeringName]
-		p := &dataplane.VpcPeering{
-			Name: peeringName,
-			For:  []*dataplane.PeeringEntryFor{},
-		}
-
-		for _, vpcName := range slices.Sorted(maps.Keys(peering.Peering)) {
-			vpc := peering.Peering[vpcName]
-			exposes := []*dataplane.Expose{}
-
-			for _, expose := range vpc.Expose {
-				ips := []*dataplane.PeeringIPs{}
-				as := []*dataplane.PeeringAs{}
-
-				for _, ipEntry := range expose.IPs {
-					// TODO validate
-					switch {
-					case ipEntry.CIDR != "":
-						ips = append(ips, &dataplane.PeeringIPs{
-							Rule: &dataplane.PeeringIPs_Cidr{Cidr: ipEntry.CIDR},
-						})
-					case ipEntry.Not != "":
-						ips = append(ips, &dataplane.PeeringIPs{
-							Rule: &dataplane.PeeringIPs_Not{Not: ipEntry.Not},
-						})
-					case ipEntry.VPCSubnet != "":
-						return nil, fmt.Errorf("vpcSubnet not supported yet") //nolint:goerr113 // TODO
-					default:
-						return nil, fmt.Errorf("invalid IP entry in peering %s / vpc %s: %v", peeringName, vpcName, ipEntry) //nolint:goerr113
-					}
-				}
-
-				for _, asEntry := range expose.As {
-					// TODO validate
-					switch {
-					case asEntry.CIDR != "":
-						as = append(as, &dataplane.PeeringAs{
-							Rule: &dataplane.PeeringAs_Cidr{Cidr: asEntry.CIDR},
-						})
-					case asEntry.Not != "":
-						as = append(as, &dataplane.PeeringAs{
-							Rule: &dataplane.PeeringAs_Not{Not: asEntry.Not},
-						})
-					default:
-						return nil, fmt.Errorf("invalid IP entry in peering %s / vpc %s: %v", peeringName, vpcName, asEntry) //nolint:goerr113
-					}
-				}
-
-				exposes = append(exposes, &dataplane.Expose{
-					Ips: ips,
-					As:  as,
-				})
-			}
-
-			p.For = append(p.For, &dataplane.PeeringEntryFor{
-				Vpc:    vpcName,
-				Expose: exposes,
-			})
-		}
-
-		cfg.Overlay.Peerings = append(cfg.Overlay.Peerings, p)
-	}
-
-	return cfg, nil
 }
