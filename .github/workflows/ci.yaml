@@ -172,6 +172,48 @@ jobs:
             This is an automated Pull Request created by GitHub Actions workflow,
             in the gateway repository.
 
+      # Bump gateway in the fabric repository
+
+      - name: Checkout fabric repository
+        uses: actions/checkout@v4
+        with:
+          repository: githedgehog/fabric
+          path: fabric-repo
+          persist-credentials: false
+
+      - name: Bump gateway in fabric
+        working-directory: fabric-repo
+        run: |
+          go get go.githedgehog.com/gateway@${{ github.ref_name }}
+          go mod tidy && go mod vendor && git add vendor
+
+      - name: Generate token for the fabric repository
+        uses: actions/create-github-app-token@v2
+        id: fabric-app-token
+        with:
+          app-id: ${{ secrets.FABRIC_APP_ID }}
+          private-key: ${{ secrets.FABRIC_PRIVATE_KEY }}
+          repositories: |
+            fabric
+
+      - name: Create Pull Request for fabric
+        uses: peter-evans/create-pull-request@v7
+        id: fabric-pr
+        with:
+          token: ${{ steps.fabric-app-token.outputs.token }}
+          path: fabric-repo
+          branch: pr/auto/gateway-bump
+          commit-message: |
+            bump: gateway to ${{ github.ref_name }}
+
+            This is an automated commit created by GitHub Actions workflow,
+            in the gateway repository.
+          signoff: true
+          title: "bump: gateway to ${{ github.ref_name }}"
+          body: |
+            This is an automated Pull Request created by GitHub Actions workflow,
+            in the gateway repository.
+
       # Bump gateway docs in the docs repository
 
       - name: Checkout docs repository
