@@ -214,7 +214,7 @@ func (svc *Service) enforceDataplaneConfig(ctx context.Context, ag *gwintapi.Gat
 	if err != nil {
 		return fmt.Errorf("getting config generation: %w", err)
 	}
-	if resp.Generation != uint64(ag.Generation) { //nolint:gosec // TODO fix proto
+	if resp.Generation != ag.Generation {
 		slog.Info("Dataplane config needs to be updated", "current", resp.Generation, "new", ag.Generation)
 
 		gwCfg, err := buildDataplaneConfig(ag)

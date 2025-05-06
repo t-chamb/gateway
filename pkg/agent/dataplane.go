@@ -12,14 +12,14 @@ import (
 
 func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, error) {
 	cfg := &dataplane.GatewayConfig{
-		Generation: uint64(ag.Generation), //nolint:gosec // TODO fix proto
+		Generation: ag.Generation,
 		Device: &dataplane.Device{
 			Driver:   dataplane.PacketDriver_KERNEL,
 			Hostname: ag.Name,
 			Loglevel: dataplane.LogLevel_DEBUG,
 		},
 		Underlay: &dataplane.Underlay{ // TODO replace with actual generated config
-			Vrf: []*dataplane.VRF{
+			Vrfs: []*dataplane.VRF{
 				{
 					Name: "default",
 					Interfaces: []*dataplane.Interface{
