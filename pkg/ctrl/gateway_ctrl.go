@@ -44,7 +44,7 @@ const (
 
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=gateways/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfoes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfos,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=peerings,verbs=get;list;watch
 
 // +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete

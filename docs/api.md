@@ -212,7 +212,7 @@ _Appears in:_
 
 
 
-VPCInfo is the Schema for the vpcinfoes API.
+VPCInfo is the Schema for the vpcinfos API.
 
 
 

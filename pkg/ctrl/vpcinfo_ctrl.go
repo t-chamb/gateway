@@ -14,8 +14,8 @@ import (
 	kctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfoes,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfoes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfos,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.githedgehog.com,resources=vpcinfos/status,verbs=get;update;patch
 
 type VPCInfoReconciler struct {
 	kclient.Client

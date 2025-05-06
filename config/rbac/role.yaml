@@ -34,7 +34,7 @@ rules:
   resources:
   - gateways
   - peerings
-  - vpcinfoes
+  - vpcinfos
   verbs:
   - get
   - list
@@ -43,7 +43,7 @@ rules:
   - gateway.githedgehog.com
   resources:
   - gateways/status
-  - vpcinfoes/status
+  - vpcinfos/status
   verbs:
   - get
   - patch

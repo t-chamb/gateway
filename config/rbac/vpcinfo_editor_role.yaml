@@ -16,7 +16,7 @@ rules:
 - apiGroups:
   - gateway.githedgehog.com
   resources:
-  - vpcinfoes
+  - vpcinfos
   verbs:
   - create
   - delete
@@ -28,6 +28,6 @@ rules:
 - apiGroups:
   - gateway.githedgehog.com
   resources:
-  - vpcinfoes/status
+  - vpcinfos/status
   verbs:
   - get
