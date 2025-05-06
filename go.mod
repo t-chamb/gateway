@@ -11,7 +11,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/stretchr/testify v1.10.0
-	go.githedgehog.com/gateway-proto v0.5.1
+	go.githedgehog.com/gateway-proto v0.6.0
 	google.golang.org/grpc v1.72.0
 	k8s.io/api v0.32.4
 	k8s.io/apimachinery v0.32.4
