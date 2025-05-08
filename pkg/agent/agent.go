@@ -213,7 +213,14 @@ func (svc *Service) enforceDataplaneConfig(ctx context.Context, ag *gwintapi.Gat
 
 	resp, err := svc.dpClient.GetConfigGeneration(ctx, &dataplane.GetConfigGenerationRequest{})
 	if err != nil {
-		return fmt.Errorf("getting config generation: %w", err)
+		// TODO remove it when dataplane is fixed to properly handle no config applied
+		if status, ok := status.FromError(err); ok && status.Code() == codes.Internal && status.Message() == "Failed to get generation: No config is currently applied" {
+			resp = &dataplane.GetConfigGenerationResponse{
+				Generation: 0,
+			}
+		} else {
+			return fmt.Errorf("getting config generation: %w", err)
+		}
 	}
 	if resp.Generation != ag.Generation {
 		slog.Info("Dataplane config needs to be updated", "current", resp.Generation, "new", ag.Generation)
