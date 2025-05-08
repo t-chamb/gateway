@@ -150,12 +150,20 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 	}
 	peerings := map[string]gwapi.PeeringSpec{}
 	for _, peering := range peeringList.Items {
+		missingVPC := false
+
 		for peerVPC := range peering.Spec.Peering {
 			if _, exists := vpcs[peerVPC]; !exists {
-				l.Info("Peering VPC not found, skipping", "name", peering.Name, "namespace", peering.Namespace, "vpc", peerVPC)
+				l.Info("Peered VPC not found, skipping", "peering", peering.Name, "vpc", peerVPC, "ns", peering.Namespace)
 
-				continue
+				missingVPC = true
+
+				break
 			}
+		}
+
+		if missingVPC {
+			continue
 		}
 
 		peerings[peering.Name] = peering.Spec
