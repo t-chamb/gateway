@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.githedgehog.com/gateway-proto/pkg/dataplane"
+	"go.githedgehog.com/gateway-proto/pkg/protoyaml"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	"go.githedgehog.com/gateway/api/meta"
 	"google.golang.org/grpc"
@@ -220,6 +221,15 @@ func (svc *Service) enforceDataplaneConfig(ctx context.Context, ag *gwintapi.Gat
 		gwCfg, err := buildDataplaneConfig(ag)
 		if err != nil {
 			return fmt.Errorf("building dataplane config: %w", err)
+		}
+
+		if slog.Default().Enabled(ctx, slog.LevelDebug) {
+			gwCfgData, err := protoyaml.MarshalYAML(gwCfg)
+			if err != nil {
+				return fmt.Errorf("marshalling dataplane config to yaml: %w", err)
+			}
+
+			fmt.Fprintln(os.Stderr, string(gwCfgData))
 		}
 
 		resp, err := svc.dpClient.UpdateConfig(ctx, &dataplane.UpdateConfigRequest{
