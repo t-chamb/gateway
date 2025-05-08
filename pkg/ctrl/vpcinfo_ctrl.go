@@ -41,7 +41,7 @@ func (r *VPCInfoReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 
 	vpc := &gwapi.VPCInfo{}
 	if err := r.Get(ctx, req.NamespacedName, vpc); err != nil {
-		if !kapierrors.IsNotFound(err) {
+		if kapierrors.IsNotFound(err) {
 			return kctrl.Result{}, nil
 		}
 

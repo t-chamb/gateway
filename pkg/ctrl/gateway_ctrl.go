@@ -111,7 +111,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 
 	gw := &gwapi.Gateway{}
 	if err := r.Get(ctx, req.NamespacedName, gw); err != nil {
-		if !kapierrors.IsNotFound(err) {
+		if kapierrors.IsNotFound(err) {
 			return kctrl.Result{}, nil
 		}
 
