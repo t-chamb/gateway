@@ -44,6 +44,44 @@ spec:
           spec:
             description: GatewayAgentSpec defines the desired state of GatewayAgent.
             properties:
+              gateway:
+                description: GatewaySpec defines the desired state of Gateway.
+                properties:
+                  asn:
+                    description: ASN is the ASN of the gateway
+                    format: int32
+                    type: integer
+                  interfaces:
+                    additionalProperties:
+                      description: GatewayInterface defines the configuration for
+                        a gateway interface
+                      properties:
+                        ip:
+                          description: IP is the IP address to assign to the interface
+                          type: string
+                      type: object
+                    description: Interfaces is a map of interface names to their configurations
+                    type: object
+                  neighbors:
+                    description: Neighbors is a list of BGP neighbors
+                    items:
+                      description: GatewayBGPNeighbor defines the configuration for
+                        a BGP neighbor
+                      properties:
+                        asn:
+                          description: ASN is the remote ASN of the BGP neighbor
+                          format: int32
+                          type: integer
+                        ip:
+                          description: IP is the IP address of the BGP neighbor
+                          type: string
+                      type: object
+                    type: array
+                  protocolIP:
+                    description: ProtocolIP is used as a loopback IP and BGP Router
+                      ID
+                    type: string
+                type: object
               peerings:
                 additionalProperties:
                   description: PeeringSpec defines the desired state of Peering.
