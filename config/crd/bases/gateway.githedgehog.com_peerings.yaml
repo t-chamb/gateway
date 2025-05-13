@@ -72,13 +72,6 @@ spec:
                             type: array
                         type: object
                       type: array
-                    ingress:
-                      items:
-                        properties:
-                          allow:
-                            type: object
-                        type: object
-                      type: array
                   type: object
                 description: Peerings is a map of peering entries for each VPC participating
                   in the peering (keyed by VPC name)

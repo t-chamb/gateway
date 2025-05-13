@@ -114,13 +114,6 @@ spec:
                                   type: array
                               type: object
                             type: array
-                          ingress:
-                            items:
-                              properties:
-                                allow:
-                                  type: object
-                              type: object
-                            type: array
                         type: object
                       description: Peerings is a map of peering entries for each VPC
                         participating in the peering (keyed by VPC name)
@@ -138,15 +131,6 @@ spec:
                           cidr:
                             description: CIDR is the subnet CIDR block, such as "10.0.0.0/24"
                             type: string
-                          gateway:
-                            description: Gateway (optional) for the subnet, if not
-                              specified, the first IP (e.g. 10.0.0.1) in the subnet
-                              is used as the gateway
-                            type: string
-                          vni:
-                            description: VNI is the VNI for the subnet
-                            format: int32
-                            type: integer
                         type: object
                       description: Subnets is a map of all subnets in the VPC (incl.
                         CIDRs, VNIs, etc) keyed by the subnet name
@@ -155,10 +139,6 @@ spec:
                       description: VNI is the VNI for the VPC
                       format: int32
                       type: integer
-                    vrf:
-                      description: VRF (optional) is the VRF name for the VPC, if
-                        not specified, predictable VRF name is generated
-                      type: string
                   type: object
                 type: object
             type: object

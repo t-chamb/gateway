@@ -134,7 +134,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `expose` _[PeeringEntryExpose](#peeringentryexpose) array_ |  |  |  |
-| `ingress` _[PeeringEntryIngress](#peeringentryingress) array_ |  |  |  |
 
 
 #### PeeringEntryAs
@@ -187,35 +186,6 @@ _Appears in:_
 | `cidr` _string_ |  |  |  |
 | `not` _string_ |  |  |  |
 | `vpcSubnet` _string_ |  |  |  |
-
-
-#### PeeringEntryIngress
-
-
-
-
-
-
-
-_Appears in:_
-- [PeeringEntry](#peeringentry)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `allow` _[PeeringEntryIngressAllow](#peeringentryingressallow)_ |  |  |  |
-
-
-#### PeeringEntryIngressAllow
-
-
-
-
-
-
-
-_Appears in:_
-- [PeeringEntryIngress](#peeringentryingress)
-
 
 
 #### PeeringSpec
@@ -283,7 +253,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `subnets` _object (keys:string, values:[VPCInfoSubnet](#vpcinfosubnet))_ | Subnets is a map of all subnets in the VPC (incl. CIDRs, VNIs, etc) keyed by the subnet name |  |  |
 | `vni` _integer_ | VNI is the VNI for the VPC |  |  |
-| `vrf` _string_ | VRF (optional) is the VRF name for the VPC, if not specified, predictable VRF name is generated |  |  |
 
 
 #### VPCInfoStatus
@@ -318,8 +287,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `cidr` _string_ | CIDR is the subnet CIDR block, such as "10.0.0.0/24" |  |  |
-| `gateway` _string_ | Gateway (optional) for the subnet, if not specified, the first IP (e.g. 10.0.0.1) in the subnet is used as the gateway |  |  |
-| `vni` _integer_ | VNI is the VNI for the subnet |  |  |
 
 
 
@@ -397,7 +364,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `subnets` _object (keys:string, values:[VPCInfoSubnet](#vpcinfosubnet))_ | Subnets is a map of all subnets in the VPC (incl. CIDRs, VNIs, etc) keyed by the subnet name |  |  |
 | `vni` _integer_ | VNI is the VNI for the VPC |  |  |
-| `vrf` _string_ | VRF (optional) is the VRF name for the VPC, if not specified, predictable VRF name is generated |  |  |
 | `internalID` _string_ |  |  |  |
 
 

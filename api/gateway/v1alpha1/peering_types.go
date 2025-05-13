@@ -24,8 +24,8 @@ type PeeringEntryExpose struct {
 }
 
 type PeeringEntry struct {
-	Expose  []PeeringEntryExpose  `json:"expose,omitempty"`
-	Ingress []PeeringEntryIngress `json:"ingress,omitempty"`
+	Expose []PeeringEntryExpose `json:"expose,omitempty"`
+	// Ingress []PeeringEntryIngress `json:"ingress,omitempty"`
 	// TODO add natType: stateful # as there are not enough IPs in the "as" pool
 	// TODO add metric: 0 # add 0 to the advertised route metrics
 }
@@ -41,17 +41,17 @@ type PeeringEntryAs struct {
 	Not  string `json:"not,omitempty"`
 }
 
-type PeeringEntryIngress struct {
-	Allow *PeeringEntryIngressAllow `json:"allow,omitempty"`
-	// TODO add deny?
-}
+// type PeeringEntryIngress struct {
+// Allow *PeeringEntryIngressAllow `json:"allow,omitempty"`
+// TODO add deny?
+// }
 
-type PeeringEntryIngressAllow struct {
-	// TODO add actual fields
-	// stateless: true
-	// 	 tcp:
-	//     srcPort: 443
-}
+// type PeeringEntryIngressAllow struct {
+// TODO add actual fields
+// stateless: true
+// 	 tcp:
+//     srcPort: 443
+// }
 
 // PeeringStatus defines the observed state of Peering.
 type PeeringStatus struct{}
