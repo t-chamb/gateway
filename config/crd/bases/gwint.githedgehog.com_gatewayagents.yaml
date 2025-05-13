@@ -44,6 +44,10 @@ spec:
           spec:
             description: GatewayAgentSpec defines the desired state of GatewayAgent.
             properties:
+              ctrlVersion:
+                description: CtrlVersion is the version of the gateway controller
+                  to trigger generation changes on controler upgrade
+                type: string
               gateway:
                 description: GatewaySpec defines the desired state of Gateway.
                 properties:

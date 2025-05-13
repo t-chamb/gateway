@@ -14,6 +14,7 @@ import (
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	"go.githedgehog.com/gateway/api/meta"
 	"go.githedgehog.com/gateway/pkg/agent"
+	"go.githedgehog.com/gateway/pkg/version"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -185,6 +186,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 			return fmt.Errorf("setting controller reference: %w", err)
 		}
 
+		gwAg.Spec.CtrlVersion = version.Version
 		gwAg.Spec.Gateway = gw.Spec
 		gwAg.Spec.VPCs = vpcs
 		gwAg.Spec.Peerings = peerings

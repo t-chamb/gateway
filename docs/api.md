@@ -331,6 +331,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `ctrlVersion` _string_ | CtrlVersion is the version of the gateway controller to trigger generation changes on controler upgrade |  |  |
 | `gateway` _[GatewaySpec](#gatewayspec)_ |  |  |  |
 | `vpcs` _object (keys:string, values:[VPCInfoData](#vpcinfodata))_ |  |  |  |
 | `peerings` _object (keys:string, values:[PeeringSpec](#peeringspec))_ |  |  |  |
