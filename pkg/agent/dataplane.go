@@ -5,47 +5,55 @@ package agent
 
 import (
 	"fmt"
+	"net/netip"
 
 	"go.githedgehog.com/gateway-proto/pkg/dataplane"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 )
 
 func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, error) {
-	cfg := &dataplane.GatewayConfig{
-		Generation: ag.Generation,
-		Device: &dataplane.Device{
-			Driver:   dataplane.PacketDriver_KERNEL,
-			Hostname: ag.Name,
-			Loglevel: dataplane.LogLevel_DEBUG,
+	protoIP, err := netip.ParsePrefix(ag.Spec.Gateway.ProtocolIP)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ProtocolIP %s: %w", ag.Spec.Gateway.ProtocolIP, err)
+	}
+
+	ifaces := []*dataplane.Interface{
+		{
+			Name:   "lo",
+			Ipaddr: ag.Spec.Gateway.ProtocolIP,
+			Type:   dataplane.IfType_IF_TYPE_LOOPBACK,
+			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
 		},
-		Underlay: &dataplane.Underlay{ // TODO replace with actual generated config
-			Vrfs: []*dataplane.VRF{
-				{
-					Name: "default",
-					Interfaces: []*dataplane.Interface{
-						{
-							Name:   "eth0",
-							Ipaddr: "10.0.0.1/32",
-							Type:   dataplane.IfType_IF_TYPE_ETHERNET,
-							Role:   dataplane.IfRole_IF_ROLE_FABRIC,
-						},
-						{
-							Name:   "eth1",
-							Ipaddr: "10.0.0.1/32",
-							Type:   dataplane.IfType_IF_TYPE_ETHERNET,
-							Role:   dataplane.IfRole_IF_ROLE_EXTERNAL,
-						},
-					},
-				},
+	}
+	for name, iface := range ag.Spec.Gateway.Interfaces {
+		ifaces = append(ifaces, &dataplane.Interface{
+			Name:   name,
+			Ipaddr: iface.IP,
+			Type:   dataplane.IfType_IF_TYPE_ETHERNET,
+			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
+		})
+	}
+
+	neighs := []*dataplane.BgpNeighbor{}
+	for _, neigh := range ag.Spec.Gateway.Neighbors {
+		neighIP, err := netip.ParseAddr(neigh.IP)
+		if err != nil {
+			return nil, fmt.Errorf("invalid neighbor IP %s: %w", neigh.IP, err)
+		}
+		neighs = append(neighs, &dataplane.BgpNeighbor{
+			Address:   neighIP.String(),
+			RemoteAsn: fmt.Sprintf("%d", neigh.ASN),
+			AfActivate: []dataplane.BgpAF{
+				dataplane.BgpAF_IPV4_UNICAST,
+				dataplane.BgpAF_L2VPN_EVPN,
 			},
-		},
-		Overlay: &dataplane.Overlay{},
+		})
 	}
 
 	vpcSubnets := map[string]map[string]string{}
-
+	vpcs := []*dataplane.VPC{}
 	for vpcName, vpc := range ag.Spec.VPCs {
-		cfg.Overlay.Vpcs = append(cfg.Overlay.Vpcs, &dataplane.VPC{
+		vpcs = append(vpcs, &dataplane.VPC{
 			Name: vpcName,
 			Id:   vpc.InternalID,
 			Vni:  vpc.VNI,
@@ -57,6 +65,7 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 		}
 	}
 
+	peerings := []*dataplane.VpcPeering{}
 	for peeringName, peering := range ag.Spec.Peerings {
 		p := &dataplane.VpcPeering{
 			Name: peeringName,
@@ -122,8 +131,39 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 			})
 		}
 
-		cfg.Overlay.Peerings = append(cfg.Overlay.Peerings, p)
+		peerings = append(peerings, p)
 	}
 
-	return cfg, nil
+	return &dataplane.GatewayConfig{
+		Generation: ag.Generation,
+		Device: &dataplane.Device{
+			Driver:   dataplane.PacketDriver_KERNEL,
+			Hostname: ag.Name,
+			Loglevel: dataplane.LogLevel_DEBUG,
+		},
+		Underlay: &dataplane.Underlay{
+			Vrfs: []*dataplane.VRF{
+				{
+					Name:       "default",
+					Interfaces: ifaces,
+					Router: &dataplane.RouterConfig{
+						Asn:       fmt.Sprintf("%d", ag.Spec.Gateway.ASN),
+						RouterId:  protoIP.Addr().String(),
+						Neighbors: neighs,
+						Ipv4Unicast: &dataplane.BgpAddressFamilyIPv4{
+							RedistributeConnected: false,
+							RedistributeStatic:    false,
+						},
+						L2VpnEvpn: &dataplane.BgpAddressFamilyL2VpnEvpn{
+							AdvertiseAllVni: true,
+						},
+					},
+				},
+			},
+		},
+		Overlay: &dataplane.Overlay{
+			Vpcs:     vpcs,
+			Peerings: peerings,
+		},
+	}, nil
 }

@@ -6,10 +6,10 @@ package ctrl
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	"go.githedgehog.com/gateway/api/meta"
@@ -32,10 +32,18 @@ import (
 )
 
 const (
-	configVolumeName    = "config"
-	socketVolumeName    = "socket"
-	gatewaySocketDir    = "/tmp/gateway"
-	dataplaneSockerName = "dataplane.sock"
+	configVolumeName = "config"
+
+	dataplaneRunVolumeName = "dataplane-run"
+	frrRunVolumeName       = "frr-run"
+
+	dataplaneRunHostPath = "/run/hedgehog/dataplane"
+	frrRunHostPath       = "/run/hedgehog/frr"
+
+	dataplaneRunMountPath = "/run/dataplane"
+	dataplaneSocketName   = "dataplane.sock"
+
+	frrTmpVolumeName = "frr-tmp"
 )
 
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents,verbs=get;list;watch;create;update;patch;delete
@@ -177,6 +185,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 			return fmt.Errorf("setting controller reference: %w", err)
 		}
 
+		gwAg.Spec.Gateway = gw.Spec
 		gwAg.Spec.VPCs = vpcs
 		gwAg.Spec.Peerings = peerings
 
@@ -279,25 +288,22 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		},
 	}
 
-	socketVolume := corev1.Volume{
-		Name: socketVolumeName,
+	dataplaneSocketVolume := corev1.Volume{
+		Name: dataplaneRunVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			HostPath: &corev1.HostPathVolumeSource{
-				Path: gatewaySocketDir,
+				Path: dataplaneRunHostPath,
 				Type: ptr.To(corev1.HostPathDirectoryOrCreate),
 			},
 		},
 	}
-	socketVolumeMount := corev1.VolumeMount{
-		Name:      socketVolumeName,
-		MountPath: gatewaySocketDir,
-	}
 
 	{
 		agCfgData, err := kyaml.Marshal(&meta.AgentConfig{
-			Name:             gw.Name,
-			Namespace:        gw.Namespace,
-			DataplaneAddress: "unix://" + filepath.Join(gatewaySocketDir, dataplaneSockerName),
+			Name:      gw.Name,
+			Namespace: gw.Namespace,
+			// TODO switch to unix socket: "unix://" + filepath.Join(dataplaneRunMountDir, dataplaneSocketName),
+			DataplaneAddress: "[::1]:50051",
 		})
 		if err != nil {
 			return fmt.Errorf("marshalling agent config: %w", err)
@@ -347,14 +353,21 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Labels: labels,
 					},
 					Spec: corev1.PodSpec{
-						NodeName:           gw.Name,
-						ServiceAccountName: saName,
+						NodeName:                      gw.Name,
+						ServiceAccountName:            saName,
+						HostNetwork:                   true,
+						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Tolerations:                   r.cfg.Tolerations,
 						Containers: []corev1.Container{
 							{
 								Name:  "agent",
 								Image: r.cfg.AgentRef,
 								VolumeMounts: []corev1.VolumeMount{
-									socketVolumeMount,
+									{
+										Name:      dataplaneRunVolumeName,
+										MountPath: dataplaneRunMountPath,
+									},
 									{
 										Name:      configVolumeName,
 										MountPath: agent.ConfigDir,
@@ -367,12 +380,8 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								},
 							},
 						},
-						HostNetwork:                   true,
-						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
-						TerminationGracePeriodSeconds: ptr.To(int64(10)),
-						Tolerations:                   r.cfg.Tolerations,
 						Volumes: []corev1.Volume{
-							socketVolume,
+							dataplaneSocketVolume,
 							{
 								Name: configVolumeName,
 								VolumeSource: corev1.VolumeSource{
@@ -395,7 +404,22 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		}
 	}
 
+	frrSocketVolume := corev1.Volume{
+		Name: frrRunVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: frrRunHostPath,
+				Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+			},
+		},
+	}
+
 	{
+		ifaceFlags := lo.Flatten(lo.Map(lo.Keys(gw.Spec.Interfaces),
+			func(ifaceName string, _ int) []string {
+				return []string{"--interface", ifaceName}
+			}))
+
 		dpDS := &appv1.DaemonSet{ObjectMeta: kmetav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      entityName(gw.Name, "dataplane"),
@@ -419,27 +443,35 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Labels: labels,
 					},
 					Spec: corev1.PodSpec{
-						NodeName: gw.Name,
+						NodeName:                      gw.Name,
+						HostNetwork:                   true,
+						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Tolerations:                   r.cfg.Tolerations,
 						Containers: []corev1.Container{
 							{
 								Name:  "dataplane",
 								Image: r.cfg.DataplaneRef,
-								// TODO replace with actual args
-								Args: []string{"server", "-t", "unix://" + filepath.Join(gatewaySocketDir, dataplaneSockerName)},
-								VolumeMounts: []corev1.VolumeMount{
-									socketVolumeMount,
-								},
+								Args:  append([]string{"--driver", "kernel"}, ifaceFlags...),
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: ptr.To(true),
 									RunAsUser:  ptr.To(int64(0)),
 								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      dataplaneRunVolumeName,
+										MountPath: "/run/dataplane",
+									},
+									{
+										Name:      frrRunVolumeName,
+										MountPath: "/var/run/frr",
+									},
+								},
 							},
 						},
-						HostNetwork:                   true,
-						TerminationGracePeriodSeconds: ptr.To(int64(10)),
-						Tolerations:                   r.cfg.Tolerations,
 						Volumes: []corev1.Volume{
-							socketVolume,
+							dataplaneSocketVolume,
+							frrSocketVolume,
 						},
 					},
 				},
@@ -450,6 +482,17 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		}); err != nil {
 			return fmt.Errorf("creating or updating gateway dataplane daemonset: %w", err)
 		}
+	}
+
+	frrVolumeMounts := []corev1.VolumeMount{
+		{
+			Name:      frrRunVolumeName,
+			MountPath: "/run/frr",
+		},
+		{
+			Name:      frrTmpVolumeName,
+			MountPath: "/var/tmp/frr",
+		},
 	}
 
 	{
@@ -476,18 +519,52 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Labels: labels,
 					},
 					Spec: corev1.PodSpec{
-						NodeName: gw.Name,
+						NodeName:                      gw.Name,
+						HostNetwork:                   true,
+						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Tolerations:                   r.cfg.Tolerations,
+						InitContainers: []corev1.Container{
+							// TODO remove it after frr container will take care of this
+							{
+								Name:    "init-frr",
+								Image:   r.cfg.FRRRef,
+								Command: []string{"/bin/bash", "-c", "--"},
+								Args: []string{
+									"set -ex && " +
+										"rm -rf /var/run && ln -s /run /var/run &&" +
+										"mkdir -p /var/run/frr/hh && chown -R frr:frr /var/run/frr/ && chmod -R 760 /var/run/frr",
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
+								VolumeMounts: frrVolumeMounts,
+							},
+						},
 						Containers: []corev1.Container{
 							{
 								Name:    "frr",
 								Image:   r.cfg.FRRRef,
-								Command: []string{"/bin/bash", "-c", "--"},                                 // TODO remove
-								Args:    []string{"while true; echo 'Welcome to frr'; do sleep 60; done;"}, // TODO remove
+								Command: []string{"/libexec/frr/docker-start"},
+								Args:    []string{"--sock-path", "/var/run/frr/frr-agent.sock", "--reloader", "/libexec/frr/frr-reload", "--bindir", "/bin"},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
+								VolumeMounts: frrVolumeMounts,
 							},
 						},
-						HostNetwork:                   true,
-						TerminationGracePeriodSeconds: ptr.To(int64(10)),
-						Tolerations:                   r.cfg.Tolerations,
+						Volumes: []corev1.Volume{
+							frrSocketVolume,
+							{
+								Name: frrTmpVolumeName,
+								VolumeSource: corev1.VolumeSource{
+									// TODO consider memory medium
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+						},
 					},
 				},
 				UpdateStrategy: replaceUpdateStrategy,
