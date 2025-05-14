@@ -93,7 +93,7 @@ func (r *GatewayReconciler) enqueueAllGateways(ctx context.Context, obj kclient.
 	res := []reconcile.Request{}
 
 	gws := &gwapi.GatewayList{}
-	if err := r.List(ctx, gws, kclient.InNamespace(obj.GetNamespace())); err != nil {
+	if err := r.List(ctx, gws); err != nil {
 		kctrllog.FromContext(ctx).Error(err, "error listing gateways to reconcile all")
 
 		return nil
