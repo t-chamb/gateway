@@ -534,7 +534,6 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								Command: []string{"/bin/bash", "-c", "--"},
 								Args: []string{
 									"set -ex && " +
-										"rm -rf /var/run && ln -s /run /var/run &&" +
 										"mkdir -p /var/run/frr/hh && chown -R frr:frr /var/run/frr/ && chmod -R 760 /var/run/frr",
 								},
 								SecurityContext: &corev1.SecurityContext{
