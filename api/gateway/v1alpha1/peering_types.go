@@ -5,6 +5,9 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"slices"
 
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,10 +85,24 @@ func init() {
 }
 
 func (p *Peering) Default() {
-	// TODO add defaulting logic
+	if p.Labels == nil {
+		p.Labels = map[string]string{}
+	}
+
+	vpcs := slices.Collect(maps.Keys(p.Spec.Peering))
+	if len(vpcs) != 2 {
+		return
+	}
+
+	p.Labels[ListLabelVPC(vpcs[0])] = ListLabelValue
+	p.Labels[ListLabelVPC(vpcs[1])] = ListLabelValue
 }
 
 func (p *Peering) Validate(_ context.Context, _ kclient.Reader) error {
-	// TODO add validation logic
+	vpcs := slices.Collect(maps.Keys(p.Spec.Peering))
+	if len(vpcs) != 2 {
+		return fmt.Errorf("peering must have exactly 2 VPCs, got %d", len(vpcs)) //nolint:goerr113
+	}
+
 	return nil
 }
