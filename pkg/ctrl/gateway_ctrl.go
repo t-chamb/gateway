@@ -548,7 +548,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								Name:    "frr",
 								Image:   r.cfg.FRRRef,
 								Command: []string{"/libexec/frr/docker-start"},
-								Args:    []string{"--sock-path", "/var/run/frr/frr-agent.sock", "--reloader", "/libexec/frr/frr-reload", "--bindir", "/bin"},
+								Args:    []string{"--sock-path", "/var/run/frr/frr-agent.sock", "--reloader", "/libexec/frr/frr-reload.bin", "--bindir", "/bin"},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: ptr.To(true),
 									RunAsUser:  ptr.To(int64(0)),
