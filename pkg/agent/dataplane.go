@@ -24,7 +24,12 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 			Type:   dataplane.IfType_IF_TYPE_LOOPBACK,
 			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
 		},
-		// TODO add interface with the VTEP type
+		{
+			Name:   "vtep",
+			Ipaddr: ag.Spec.Gateway.VTEPIP,
+			Type:   dataplane.IfType_IF_TYPE_VTEP,
+			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
+		},
 	}
 	for name, iface := range ag.Spec.Gateway.Interfaces {
 		ifaces = append(ifaces, &dataplane.Interface{

@@ -85,6 +85,9 @@ spec:
                     description: ProtocolIP is used as a loopback IP and BGP Router
                       ID
                     type: string
+                  vtepIP:
+                    description: VTEP IP to be used by the gateway
+                    type: string
                 type: object
               peerings:
                 additionalProperties:

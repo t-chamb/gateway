@@ -83,6 +83,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `protocolIP` _string_ | ProtocolIP is used as a loopback IP and BGP Router ID |  |  |
+| `vtepIP` _string_ | VTEP IP to be used by the gateway |  |  |
 | `asn` _integer_ | ASN is the ASN of the gateway |  |  |
 | `interfaces` _object (keys:string, values:[GatewayInterface](#gatewayinterface))_ | Interfaces is a map of interface names to their configurations |  |  |
 | `neighbors` _[GatewayBGPNeighbor](#gatewaybgpneighbor) array_ | Neighbors is a list of BGP neighbors |  |  |
