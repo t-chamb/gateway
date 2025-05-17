@@ -20,14 +20,8 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 	ifaces := []*dataplane.Interface{
 		{
 			Name:   "lo",
-			Ipaddr: ag.Spec.Gateway.ProtocolIP,
-			Type:   dataplane.IfType_IF_TYPE_LOOPBACK,
-			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
-		},
-		{
-			Name:   "vtep",
 			Ipaddr: ag.Spec.Gateway.VTEPIP,
-			Type:   dataplane.IfType_IF_TYPE_VTEP,
+			Type:   dataplane.IfType_IF_TYPE_LOOPBACK,
 			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
 		},
 	}
