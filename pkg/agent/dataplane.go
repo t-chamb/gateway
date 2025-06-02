@@ -19,18 +19,18 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 
 	ifaces := []*dataplane.Interface{
 		{
-			Name:   "lo",
-			Ipaddr: ag.Spec.Gateway.VTEPIP,
-			Type:   dataplane.IfType_IF_TYPE_LOOPBACK,
-			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
+			Name:    "lo",
+			Ipaddrs: []string{ag.Spec.Gateway.VTEPIP},
+			Type:    dataplane.IfType_IF_TYPE_LOOPBACK,
+			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
 		},
 	}
 	for name, iface := range ag.Spec.Gateway.Interfaces {
 		ifaces = append(ifaces, &dataplane.Interface{
-			Name:   name,
-			Ipaddr: iface.IP,
-			Type:   dataplane.IfType_IF_TYPE_ETHERNET,
-			Role:   dataplane.IfRole_IF_ROLE_FABRIC,
+			Name:    name,
+			Ipaddrs: []string{iface.IP},
+			Type:    dataplane.IfType_IF_TYPE_ETHERNET,
+			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
 		})
 	}
 
