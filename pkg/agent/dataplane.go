@@ -11,6 +11,11 @@ import (
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 )
 
+const (
+	IfLoopback = "lo"
+	IfVTEP     = "vtep"
+)
+
 func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, error) {
 	protoIP, err := netip.ParsePrefix(ag.Spec.Gateway.ProtocolIP)
 	if err != nil {
@@ -19,16 +24,22 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 
 	ifaces := []*dataplane.Interface{
 		{
-			Name:    "lo",
+			Name:    IfLoopback,
 			Ipaddrs: []string{ag.Spec.Gateway.VTEPIP},
 			Type:    dataplane.IfType_IF_TYPE_LOOPBACK,
+			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
+		},
+		{
+			Name:    IfVTEP,
+			Ipaddrs: []string{ag.Spec.Gateway.VTEPIP},
+			Type:    dataplane.IfType_IF_TYPE_VTEP,
 			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
 		},
 	}
 	for name, iface := range ag.Spec.Gateway.Interfaces {
 		ifaces = append(ifaces, &dataplane.Interface{
 			Name:    name,
-			Ipaddrs: []string{iface.IP},
+			Ipaddrs: iface.IPs,
 			Type:    dataplane.IfType_IF_TYPE_ETHERNET,
 			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
 		})
@@ -46,6 +57,12 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 			AfActivate: []dataplane.BgpAF{
 				dataplane.BgpAF_IPV4_UNICAST,
 				dataplane.BgpAF_L2VPN_EVPN,
+			},
+			Networks: []string{ag.Spec.Gateway.VTEPIP},
+			UpdateSource: &dataplane.BgpNeighborUpdateSource{
+				Source: &dataplane.BgpNeighborUpdateSource_Interface{
+					Interface: neigh.Source,
+				},
 			},
 		})
 	}

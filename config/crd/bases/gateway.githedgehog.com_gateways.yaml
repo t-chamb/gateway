@@ -53,9 +53,12 @@ spec:
                   description: GatewayInterface defines the configuration for a gateway
                     interface
                   properties:
-                    ip:
-                      description: IP is the IP address to assign to the interface
-                      type: string
+                    ips:
+                      description: IPs is the list of IP address to assign to the
+                        interface
+                      items:
+                        type: string
+                      type: array
                   type: object
                 description: Interfaces is a map of interface names to their configurations
                 type: object
@@ -71,6 +74,10 @@ spec:
                       type: integer
                     ip:
                       description: IP is the IP address of the BGP neighbor
+                      type: string
+                    source:
+                      description: Source is the source interface for the BGP neighbor
+                        configuration
                       type: string
                   type: object
                 type: array

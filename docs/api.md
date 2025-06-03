@@ -48,6 +48,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `source` _string_ | Source is the source interface for the BGP neighbor configuration |  |  |
 | `ip` _string_ | IP is the IP address of the BGP neighbor |  |  |
 | `asn` _integer_ | ASN is the remote ASN of the BGP neighbor |  |  |
 
@@ -65,7 +66,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ip` _string_ | IP is the IP address to assign to the interface |  |  |
+| `ips` _string array_ | IPs is the list of IP address to assign to the interface |  |  |
 
 
 #### GatewaySpec
