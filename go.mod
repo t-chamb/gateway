@@ -13,7 +13,7 @@ require (
 	github.com/samber/lo v1.50.0
 	github.com/stretchr/testify v1.10.0
 	go.githedgehog.com/gateway-proto v0.7.0
-	google.golang.org/grpc v1.72.2
+	google.golang.org/grpc v1.73.0
 	k8s.io/api v0.32.5
 	k8s.io/apimachinery v0.32.5
 	k8s.io/client-go v0.32.5
