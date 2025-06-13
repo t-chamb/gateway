@@ -193,7 +193,7 @@ github.com/stretchr/testify/require
 # github.com/x448/float16 v0.8.4
 ## explicit; go 1.11
 github.com/x448/float16
-# go.githedgehog.com/gateway-proto v0.7.0
+# go.githedgehog.com/gateway-proto v0.9.0
 ## explicit; go 1.24.2
 go.githedgehog.com/gateway-proto/pkg/dataplane
 go.githedgehog.com/gateway-proto/pkg/protoyaml
