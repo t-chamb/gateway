@@ -727,6 +727,7 @@ type Interface struct {
 	Macaddr       *string                `protobuf:"bytes,6,opt,name=macaddr,proto3,oneof" json:"macaddr,omitempty"`                         // Base MAC address to be used to generate unified MAC for VTEP
 	SystemName    *string                `protobuf:"bytes,7,opt,name=system_name,json=systemName,proto3,oneof" json:"system_name,omitempty"` // Parent interface for VLAN devices, only for VLAN role
 	Ospf          *OspfInterface         `protobuf:"bytes,8,opt,name=ospf,proto3,oneof" json:"ospf,omitempty"`                               // OSPF interface configuration if enabled
+	Mtu           *uint32                `protobuf:"varint,9,opt,name=mtu,proto3,oneof" json:"mtu,omitempty"`                                // MTU for the interface
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -815,6 +816,13 @@ func (x *Interface) GetOspf() *OspfInterface {
 		return x.Ospf
 	}
 	return nil
+}
+
+func (x *Interface) GetMtu() uint32 {
+	if x != nil && x.Mtu != nil {
+		return *x.Mtu
+	}
+	return 0
 }
 
 // Defines the list of prefixes that VPCs can expose
@@ -2112,7 +2120,7 @@ const file_proto_dataplane_proto_rawDesc = "" +
 	"OspfConfig\x12\x1b\n" +
 	"\trouter_id\x18\x01 \x01(\tR\brouterId\x12\x15\n" +
 	"\x03vrf\x18\x02 \x01(\tH\x00R\x03vrf\x88\x01\x01B\x06\n" +
-	"\x04_vrf\"\xbd\x02\n" +
+	"\x04_vrf\"\xdc\x02\n" +
 	"\tInterface\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aipaddrs\x18\x02 \x03(\tR\aipaddrs\x12\"\n" +
@@ -2122,12 +2130,14 @@ const file_proto_dataplane_proto_rawDesc = "" +
 	"\amacaddr\x18\x06 \x01(\tH\x01R\amacaddr\x88\x01\x01\x12$\n" +
 	"\vsystem_name\x18\a \x01(\tH\x02R\n" +
 	"systemName\x88\x01\x01\x12.\n" +
-	"\x04ospf\x18\b \x01(\v2\x15.config.OspfInterfaceH\x03R\x04ospf\x88\x01\x01B\a\n" +
+	"\x04ospf\x18\b \x01(\v2\x15.config.OspfInterfaceH\x03R\x04ospf\x88\x01\x01\x12\x15\n" +
+	"\x03mtu\x18\t \x01(\rH\x04R\x03mtu\x88\x01\x01B\a\n" +
 	"\x05_vlanB\n" +
 	"\n" +
 	"\b_macaddrB\x0e\n" +
 	"\f_system_nameB\a\n" +
-	"\x05_ospf\">\n" +
+	"\x05_ospfB\x06\n" +
+	"\x04_mtu\">\n" +
 	"\n" +
 	"PeeringIPs\x12\x14\n" +
 	"\x04cidr\x18\x01 \x01(\tH\x00R\x04cidr\x12\x12\n" +
