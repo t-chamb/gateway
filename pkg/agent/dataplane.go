@@ -34,6 +34,7 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 			Ipaddrs: []string{ag.Spec.Gateway.VTEPIP},
 			Type:    dataplane.IfType_IF_TYPE_VTEP,
 			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
+			Macaddr: &ag.Spec.Gateway.VTEPIP,
 		},
 	}
 	for name, iface := range ag.Spec.Gateway.Interfaces {

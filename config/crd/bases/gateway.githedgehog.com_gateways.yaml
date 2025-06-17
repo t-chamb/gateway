@@ -87,6 +87,9 @@ spec:
               vtepIP:
                 description: VTEP IP to be used by the gateway
                 type: string
+              vtepMAC:
+                description: VTEP MAC address to be used by the gateway
+                type: string
             type: object
           status:
             description: GatewayStatus defines the observed state of Gateway.
