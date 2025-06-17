@@ -6,6 +6,7 @@ package ctrl
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,18 +34,21 @@ import (
 )
 
 const (
-	configVolumeName = "config"
-
+	configVolumeName       = "config"
 	dataplaneRunVolumeName = "dataplane-run"
 	frrRunVolumeName       = "frr-run"
+	frrTmpVolumeName       = "frr-tmp"
 
 	dataplaneRunHostPath = "/run/hedgehog/dataplane"
 	frrRunHostPath       = "/run/hedgehog/frr"
 
-	dataplaneRunMountPath = "/run/dataplane"
-	dataplaneSocketName   = "dataplane.sock"
+	dataplaneRunMountPath = "/var/run/dataplane"
+	frrRunMountPath       = "/var/run/frr"
+	cpiSocket             = "hh/dataplane.sock"
+	frrAgentSocket        = "frr-agent.sock"
 
-	frrTmpVolumeName = "frr-tmp"
+	// TODO switch to unix socket: "unix://" + filepath.Join(dataplaneRunMountPath, dataplaneSocketName),
+	dataplaneAPIAddress = "[::1]:50051"
 )
 
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents,verbs=get;list;watch;create;update;patch;delete
@@ -302,10 +306,9 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 
 	{
 		agCfgData, err := kyaml.Marshal(&meta.AgentConfig{
-			Name:      gw.Name,
-			Namespace: gw.Namespace,
-			// TODO switch to unix socket: "unix://" + filepath.Join(dataplaneRunMountDir, dataplaneSocketName),
-			DataplaneAddress: "[::1]:50051",
+			Name:             gw.Name,
+			Namespace:        gw.Namespace,
+			DataplaneAddress: dataplaneAPIAddress,
 		})
 		if err != nil {
 			return fmt.Errorf("marshalling agent config: %w", err)
@@ -454,7 +457,13 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 							{
 								Name:  "dataplane",
 								Image: r.cfg.DataplaneRef,
-								Args:  append([]string{"--driver", "kernel"}, ifaceFlags...),
+								Args: append([]string{
+									"--driver", "kernel",
+									"--grpc-address", dataplaneAPIAddress,
+									"--cli-sock-path", filepath.Join(dataplaneRunMountPath, "cli.sock"),
+									"--cpi-sock-path", filepath.Join(frrRunMountPath, cpiSocket),
+									"--frr-agent-path", filepath.Join(frrRunMountPath, frrAgentSocket),
+								}, ifaceFlags...),
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: ptr.To(true),
 									RunAsUser:  ptr.To(int64(0)),
@@ -462,11 +471,11 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      dataplaneRunVolumeName,
-										MountPath: "/run/dataplane",
+										MountPath: dataplaneRunMountPath,
 									},
 									{
 										Name:      frrRunVolumeName,
-										MountPath: "/var/run/frr",
+										MountPath: frrRunMountPath,
 									},
 								},
 							},
@@ -489,7 +498,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 	frrVolumeMounts := []corev1.VolumeMount{
 		{
 			Name:      frrRunVolumeName,
-			MountPath: "/run/frr",
+			MountPath: frrRunMountPath,
 		},
 		{
 			Name:      frrTmpVolumeName,
@@ -548,7 +557,11 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								Name:    "frr",
 								Image:   r.cfg.FRRRef,
 								Command: []string{"/libexec/frr/docker-start"},
-								Args:    []string{"--sock-path", "/var/run/frr/frr-agent.sock", "--reloader", "/libexec/frr/frr-reload.bin", "--bindir", "/bin"},
+								Args: []string{
+									"--sock-path", filepath.Join(frrRunMountPath, frrAgentSocket),
+									"--reloader", "/libexec/frr/frr-reload.py",
+									"--bindir", "/bin",
+								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: ptr.To(true),
 									RunAsUser:  ptr.To(int64(0)),
