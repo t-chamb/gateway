@@ -43,6 +43,7 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 			Ipaddrs: iface.IPs,
 			Type:    dataplane.IfType_IF_TYPE_ETHERNET,
 			Role:    dataplane.IfRole_IF_ROLE_FABRIC,
+			Mtu:     &iface.MTU,
 		})
 	}
 

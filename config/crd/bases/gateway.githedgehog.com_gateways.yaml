@@ -59,6 +59,10 @@ spec:
                       items:
                         type: string
                       type: array
+                    mtu:
+                      description: MTU for the interface
+                      format: int32
+                      type: integer
                   type: object
                 description: Interfaces is a map of interface names to their configurations
                 type: object
