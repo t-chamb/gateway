@@ -61,7 +61,6 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 				dataplane.BgpAF_IPV4_UNICAST,
 				dataplane.BgpAF_L2VPN_EVPN,
 			},
-			Networks: []string{ag.Spec.Gateway.VTEPIP},
 			UpdateSource: &dataplane.BgpNeighborUpdateSource{
 				Source: &dataplane.BgpNeighborUpdateSource_Interface{
 					Interface: neigh.Source,
@@ -171,6 +170,7 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 						RouterId:  protoIP.Addr().String(),
 						Neighbors: neighs,
 						Ipv4Unicast: &dataplane.BgpAddressFamilyIPv4{
+							Networks:              []string{ag.Spec.Gateway.VTEPIP},
 							RedistributeConnected: false,
 							RedistributeStatic:    false,
 						},

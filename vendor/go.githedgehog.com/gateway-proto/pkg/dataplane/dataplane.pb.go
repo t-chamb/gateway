@@ -1276,6 +1276,7 @@ type BgpAddressFamilyIPv4 struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	RedistributeConnected bool                   `protobuf:"varint,1,opt,name=redistribute_connected,json=redistributeConnected,proto3" json:"redistribute_connected,omitempty"`
 	RedistributeStatic    bool                   `protobuf:"varint,2,opt,name=redistribute_static,json=redistributeStatic,proto3" json:"redistribute_static,omitempty"`
+	Networks              []string               `protobuf:"bytes,3,rep,name=networks,proto3" json:"networks,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1324,11 +1325,19 @@ func (x *BgpAddressFamilyIPv4) GetRedistributeStatic() bool {
 	return false
 }
 
+func (x *BgpAddressFamilyIPv4) GetNetworks() []string {
+	if x != nil {
+		return x.Networks
+	}
+	return nil
+}
+
 // BGP options for IPv6 UNICAST AFI
 type BgpAddressFamilyIPv6 struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	RedistributeConnected bool                   `protobuf:"varint,1,opt,name=redistribute_connected,json=redistributeConnected,proto3" json:"redistribute_connected,omitempty"`
 	RedistributeStatic    bool                   `protobuf:"varint,2,opt,name=redistribute_static,json=redistributeStatic,proto3" json:"redistribute_static,omitempty"`
+	Networks              []string               `protobuf:"bytes,3,rep,name=networks,proto3" json:"networks,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1375,6 +1384,13 @@ func (x *BgpAddressFamilyIPv6) GetRedistributeStatic() bool {
 		return x.RedistributeStatic
 	}
 	return false
+}
+
+func (x *BgpAddressFamilyIPv6) GetNetworks() []string {
+	if x != nil {
+		return x.Networks
+	}
+	return nil
 }
 
 // BGP options for L2VPN EVPN AFI
@@ -1511,7 +1527,6 @@ type BgpNeighbor struct {
 	RemoteAsn     string                   `protobuf:"bytes,2,opt,name=remote_asn,json=remoteAsn,proto3" json:"remote_asn,omitempty"`
 	AfActivate    []BgpAF                  `protobuf:"varint,3,rep,packed,name=af_activate,json=afActivate,proto3,enum=config.BgpAF" json:"af_activate,omitempty"`
 	UpdateSource  *BgpNeighborUpdateSource `protobuf:"bytes,4,opt,name=update_source,json=updateSource,proto3" json:"update_source,omitempty"`
-	Networks      []string                 `protobuf:"bytes,5,rep,name=networks,proto3" json:"networks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1570,13 +1585,6 @@ func (x *BgpNeighbor) GetAfActivate() []BgpAF {
 func (x *BgpNeighbor) GetUpdateSource() *BgpNeighborUpdateSource {
 	if x != nil {
 		return x.UpdateSource
-	}
-	return nil
-}
-
-func (x *BgpNeighbor) GetNetworks() []string {
-	if x != nil {
-		return x.Networks
 	}
 	return nil
 }
@@ -2166,27 +2174,28 @@ const file_proto_dataplane_proto_rawDesc = "" +
 	"interfaces\"Z\n" +
 	"\aOverlay\x12\x1f\n" +
 	"\x04vpcs\x18\x01 \x03(\v2\v.config.VPCR\x04vpcs\x12.\n" +
-	"\bpeerings\x18\x02 \x03(\v2\x12.config.VpcPeeringR\bpeerings\"~\n" +
+	"\bpeerings\x18\x02 \x03(\v2\x12.config.VpcPeeringR\bpeerings\"\x9a\x01\n" +
 	"\x14BgpAddressFamilyIPv4\x125\n" +
 	"\x16redistribute_connected\x18\x01 \x01(\bR\x15redistributeConnected\x12/\n" +
-	"\x13redistribute_static\x18\x02 \x01(\bR\x12redistributeStatic\"~\n" +
+	"\x13redistribute_static\x18\x02 \x01(\bR\x12redistributeStatic\x12\x1a\n" +
+	"\bnetworks\x18\x03 \x03(\tR\bnetworks\"\x9a\x01\n" +
 	"\x14BgpAddressFamilyIPv6\x125\n" +
 	"\x16redistribute_connected\x18\x01 \x01(\bR\x15redistributeConnected\x12/\n" +
-	"\x13redistribute_static\x18\x02 \x01(\bR\x12redistributeStatic\"G\n" +
+	"\x13redistribute_static\x18\x02 \x01(\bR\x12redistributeStatic\x12\x1a\n" +
+	"\bnetworks\x18\x03 \x03(\tR\bnetworks\"G\n" +
 	"\x19BgpAddressFamilyL2vpnEvpn\x12*\n" +
 	"\x11advertise_all_vni\x18\x01 \x01(\bR\x0fadvertiseAllVni\"_\n" +
 	"\x17BgpNeighborUpdateSource\x12\x1a\n" +
 	"\aaddress\x18\x01 \x01(\tH\x00R\aaddress\x12\x1e\n" +
 	"\tinterface\x18\x02 \x01(\tH\x00R\tinterfaceB\b\n" +
-	"\x06source\"\xd8\x01\n" +
+	"\x06source\"\xbc\x01\n" +
 	"\vBgpNeighbor\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x1d\n" +
 	"\n" +
 	"remote_asn\x18\x02 \x01(\tR\tremoteAsn\x12.\n" +
 	"\vaf_activate\x18\x03 \x03(\x0e2\r.config.BgpAFR\n" +
 	"afActivate\x12D\n" +
-	"\rupdate_source\x18\x04 \x01(\v2\x1f.config.BgpNeighborUpdateSourceR\fupdateSource\x12\x1a\n" +
-	"\bnetworks\x18\x05 \x03(\tR\bnetworks\"\x80\x01\n" +
+	"\rupdate_source\x18\x04 \x01(\v2\x1f.config.BgpNeighborUpdateSourceR\fupdateSource\"\x80\x01\n" +
 	"\bRouteMap\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\x12match_prefix_lists\x18\x02 \x03(\tR\x10matchPrefixLists\x12\x16\n" +
