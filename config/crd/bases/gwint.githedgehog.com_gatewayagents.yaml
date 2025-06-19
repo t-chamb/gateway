@@ -102,6 +102,10 @@ spec:
                   vtepMAC:
                     description: VTEP MAC address to be used by the gateway
                     type: string
+                  vtepMTU:
+                    description: VTEPMTU is the MTU for the VTEP interface
+                    format: int32
+                    type: integer
                 type: object
               peerings:
                 additionalProperties:
