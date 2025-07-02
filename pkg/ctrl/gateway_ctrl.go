@@ -477,12 +477,24 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 										Name:      frrRunVolumeName,
 										MountPath: frrRunMountPath,
 									},
+									{
+										Name:      "dataplane-tmp",
+										MountPath: "/tmp",
+									},
 								},
 							},
 						},
 						Volumes: []corev1.Volume{
 							dataplaneSocketVolume,
 							frrSocketVolume,
+
+							{
+								Name: "dataplane-tmp",
+								VolumeSource: corev1.VolumeSource{
+									// TODO consider memory medium
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
 						},
 					},
 				},
