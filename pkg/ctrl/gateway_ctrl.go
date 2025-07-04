@@ -572,6 +572,30 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								},
 								VolumeMounts: frrVolumeMounts,
 							},
+							{
+								Name:    "flush-zebra-nexthops",
+								Image:   r.cfg.DataplaneRef, // TODO we need jq...
+								Command: []string{"/bin/bash", "-c", "--"},
+								Args: []string{
+									"ip -j -d nexthop show | jq '.[]|select(.protocol=\"zebra\")|.id' | while read -r id ; do ip nexthop del id $id ; done",
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
+							},
+							{
+								Name:    "flush-vtepip",
+								Image:   r.cfg.FRRRef,
+								Command: []string{"/bin/bash", "-c", "--"},
+								Args: []string{
+									fmt.Sprintf("ip addr del %s dev lo", gw.Spec.VTEPIP),
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
+							},
 						},
 						Containers: []corev1.Container{
 							{
