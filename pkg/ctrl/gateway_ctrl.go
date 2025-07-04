@@ -34,16 +34,20 @@ import (
 )
 
 const (
+	FRRExporterPort = 9342
+
 	configVolumeName       = "config"
 	dataplaneRunVolumeName = "dataplane-run"
 	frrRunVolumeName       = "frr-run"
 	frrTmpVolumeName       = "frr-tmp"
+	frrRootRunVolumeName   = "frr-root-run"
 
 	dataplaneRunHostPath = "/run/hedgehog/dataplane"
 	frrRunHostPath       = "/run/hedgehog/frr"
 
 	dataplaneRunMountPath = "/var/run/dataplane"
 	frrRunMountPath       = "/var/run/frr"
+	frrRootRunMountPath   = "/run/frr"
 	cpiSocket             = "hh/dataplane.sock"
 	frrAgentSocket        = "frr-agent.sock"
 
@@ -516,6 +520,10 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 			Name:      frrTmpVolumeName,
 			MountPath: "/var/tmp/frr",
 		},
+		{
+			Name:      frrRootRunVolumeName,
+			MountPath: frrRootRunMountPath,
+		},
 	}
 
 	{
@@ -555,6 +563,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								Command: []string{"/bin/bash", "-c", "--"},
 								Args: []string{
 									"set -ex && " +
+										"chown -R frr:frr /run/frr/ && chmod -R 760 /run/frr && " +
 										"mkdir -p /var/run/frr/hh && chown -R frr:frr /var/run/frr/ && chmod -R 760 /var/run/frr",
 								},
 								SecurityContext: &corev1.SecurityContext{
@@ -580,6 +589,25 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								},
 								VolumeMounts: frrVolumeMounts,
 							},
+							{
+								Name:    "frr-exporter",
+								Image:   r.cfg.FRRRef,
+								Command: []string{"/bin/frr_exporter"},
+								Args: []string{
+									"--web.listen-address", fmt.Sprintf("127.0.0.1:%d", FRRExporterPort),
+									"--frr.socket.dir-path", frrRootRunMountPath,
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: ptr.To(true),
+									RunAsUser:  ptr.To(int64(0)),
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      frrRootRunVolumeName,
+										MountPath: frrRootRunMountPath,
+									},
+								},
+							},
 						},
 						Volumes: []corev1.Volume{
 							frrSocketVolume,
@@ -588,6 +616,15 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								VolumeSource: corev1.VolumeSource{
 									// TODO consider memory medium
 									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+							{
+								Name: frrRootRunVolumeName,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/run/hedgehog/frr-root",
+										Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+									},
 								},
 							},
 						},
