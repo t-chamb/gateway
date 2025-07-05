@@ -362,7 +362,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Labels: labels,
 					},
 					Spec: corev1.PodSpec{
-						NodeName:                      gw.Name,
+						NodeSelector:                  map[string]string{"kubernetes.io/hostname": gw.Name},
 						ServiceAccountName:            saName,
 						HostNetwork:                   true,
 						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
@@ -452,7 +452,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Labels: labels,
 					},
 					Spec: corev1.PodSpec{
-						NodeName:                      gw.Name,
+						NodeSelector:                  map[string]string{"kubernetes.io/hostname": gw.Name},
 						HostNetwork:                   true,
 						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
 						TerminationGracePeriodSeconds: ptr.To(int64(10)),
@@ -550,7 +550,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 						Labels: labels,
 					},
 					Spec: corev1.PodSpec{
-						NodeName:                      gw.Name,
+						NodeSelector:                  map[string]string{"kubernetes.io/hostname": gw.Name},
 						HostNetwork:                   true,
 						DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
 						TerminationGracePeriodSeconds: ptr.To(int64(10)),
