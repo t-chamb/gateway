@@ -593,7 +593,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								Command: []string{"/bin/bash", "-c", "--"},
 								Args: []string{
 									"set -ex && " +
-										fmt.Sprintf("ip addr del %s dev lo", gw.Spec.VTEPIP),
+										fmt.Sprintf("ip addr del %s dev lo || true", gw.Spec.VTEPIP),
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: ptr.To(true),
