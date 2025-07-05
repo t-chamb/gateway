@@ -572,6 +572,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 								},
 								VolumeMounts: frrVolumeMounts,
 							},
+							// it's needed to avoid issues with leftover routes in the kernel being loaded by FRR on startup
 							{
 								Name:    "flush-zebra-nexthops",
 								Image:   r.cfg.DataplaneRef, // TODO we need jq...
@@ -584,6 +585,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 									RunAsUser:  ptr.To(int64(0)),
 								},
 							},
+							// it's needed to avoid issues with leftover routes on the physical interface learned from BGP
 							{
 								Name:    "flush-vtepip",
 								Image:   r.cfg.FRRRef,
