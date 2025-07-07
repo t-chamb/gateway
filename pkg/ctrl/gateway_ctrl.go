@@ -465,7 +465,7 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 									"--cli-sock-path", filepath.Join(dataplaneRunMountPath, "cli.sock"),
 									"--cpi-sock-path", filepath.Join(frrRunMountPath, cpiSocket),
 									"--frr-agent-path", filepath.Join(frrRunMountPath, frrAgentSocket),
-									"--metrics-port", fmt.Sprintf("%d", r.cfg.DataplaneMetricsPort),
+									"--metrics-address", fmt.Sprintf("127.0.0.1:%d", r.cfg.DataplaneMetricsPort),
 								}, ifaceFlags...),
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: ptr.To(true),
