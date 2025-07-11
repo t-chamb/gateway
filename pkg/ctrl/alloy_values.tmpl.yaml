@@ -1,0 +1,35 @@
+image:
+  registry: "{{ .Registry }}"
+  repository: "{{ .Image }}"
+  tag: "{{ .Version }}"
+
+alloy:
+  enableReporting: false
+  listenAddr: 0.0.0.0 # localhost will break readiness probes
+  listenPort: 12345
+  storagePath: /tmp/alloy
+  configMap:
+    create: true
+    content: |
+{{ .Config | indent 6 }}
+
+rbac:
+  create: false
+
+serviceAccount:
+  create: false
+
+configReloader:
+  enabled: false
+
+service:
+  enabled: false
+
+controller:
+  type: "daemonset"
+  hostNetwork: true
+  dnsPolicy: "ClusterFirstWithHostNet"
+  nodeSelector:
+    "kubernetes.io/hostname": "{{ .Hostname }}"
+  tolerations:
+{{ .Tolerations | indent 4 }}

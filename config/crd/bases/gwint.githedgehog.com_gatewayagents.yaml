@@ -51,6 +51,52 @@ spec:
               gateway:
                 description: GatewaySpec defines the desired state of Gateway.
                 properties:
+                  alloy:
+                    description: Alloy is the Alloy configuration for the gateway
+                    properties:
+                      dataplaneScrapeIntervalSeconds:
+                        type: integer
+                      frrScrapeIntervalSeconds:
+                        type: integer
+                      prometheusTargets:
+                        additionalProperties:
+                          properties:
+                            basicAuth:
+                              properties:
+                                password:
+                                  type: string
+                                username:
+                                  type: string
+                              type: object
+                            bearerToken:
+                              type: string
+                            caPEM:
+                              type: string
+                            certPEM:
+                              type: string
+                            insecureSkipVerify:
+                              type: boolean
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            sendIntervalSeconds:
+                              type: integer
+                            url:
+                              type: string
+                            useControlProxy:
+                              type: boolean
+                          type: object
+                        type: object
+                      unixExporterCollectors:
+                        items:
+                          type: string
+                        type: array
+                      unixExporterEnabled:
+                        type: boolean
+                      unixScrapeIntervalSeconds:
+                        type: integer
+                    type: object
                   asn:
                     description: ASN is the ASN of the gateway
                     format: int32

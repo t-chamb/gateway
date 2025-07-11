@@ -4,12 +4,17 @@
 package ctrl
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
+	helmapi "github.com/k3s-io/helm-controller/pkg/apis/helm.cattle.io/v1"
 	"github.com/samber/lo"
 	gwapi "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
@@ -53,6 +58,12 @@ const (
 	dataplaneAPIAddress = "[::1]:50051"
 )
 
+//go:embed alloy_config.tmpl
+var alloyConfigTmpl string
+
+//go:embed alloy_values.tmpl.yaml
+var alloyValuesTmpl string
+
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=gwint.githedgehog.com,resources=gatewayagents/finalizers,verbs=update
@@ -67,6 +78,7 @@ const (
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=helm.cattle.io,resources=helmcharts,verbs=get;list;watch;create;update;patch;delete
 
 type GatewayReconciler struct {
 	kclient.Client
@@ -666,5 +678,103 @@ func (r *GatewayReconciler) deployGateway(ctx context.Context, gw *gwapi.Gateway
 		}
 	}
 
+	if len(gw.Spec.Alloy.PrometheusTargets) > 0 {
+		gw.Spec.Alloy.Default()
+		alloyConfig, err := FromTemplate("config", alloyConfigTmpl, alloyConfigTemplateConf{
+			AlloyConfig:          gw.Spec.Alloy,
+			DataplaneMetricsPort: r.cfg.DataplaneMetricsPort,
+			FRRMetricsPort:       r.cfg.FRRMetricsPort,
+			Hostname:             gw.Name,
+			PrometheusEnabled:    len(gw.Spec.Alloy.PrometheusTargets) > 0,
+			ProxyURL:             r.cfg.ControlProxyURL,
+		})
+		if err != nil {
+			return fmt.Errorf("generating alloy config: %w", err)
+		}
+
+		tolerations, err := kyaml.Marshal(r.cfg.Tolerations)
+		if err != nil {
+			return fmt.Errorf("marshalling tolerations: %w", err)
+		}
+
+		alloyValues, err := FromTemplate("values", alloyValuesTmpl, map[string]any{
+			"Registry":    r.cfg.RegistryURL,
+			"Image":       r.cfg.AlloyImageName,
+			"Version":     r.cfg.AlloyImageVersion,
+			"Config":      alloyConfig,
+			"Tolerations": string(tolerations),
+			"Hostname":    gw.Name,
+		})
+		if err != nil {
+			return fmt.Errorf("generating alloy values: %w", err)
+		}
+
+		alloyChart := &helmapi.HelmChart{
+			ObjectMeta: kmetav1.ObjectMeta{
+				Name:      fmt.Sprintf("gw--%s--op", gw.Name),
+				Namespace: gw.Namespace,
+			},
+		}
+
+		if _, err := ctrlutil.CreateOrUpdate(ctx, r.Client, alloyChart, func() error {
+			if err := ctrlutil.SetControllerReference(gw, alloyChart, r.Scheme(),
+				ctrlutil.WithBlockOwnerDeletion(false)); err != nil {
+				return fmt.Errorf("setting controller reference: %w", err)
+			}
+
+			alloyChart.Spec = helmapi.HelmChartSpec{
+				Chart:           "oci://" + r.cfg.RegistryURL + "/" + r.cfg.AlloyChartName,
+				Version:         r.cfg.AlloyChartVersion,
+				TargetNamespace: gw.Namespace,
+				CreateNamespace: true,
+				DockerRegistrySecret: &corev1.LocalObjectReference{
+					Name: r.cfg.RegistryAuthSecret,
+				},
+				RepoCAConfigMap: &corev1.LocalObjectReference{
+					Name: r.cfg.RegistryCASecret,
+				},
+				ValuesContent: alloyValues,
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("creating or updating alloy chart: %w", err)
+		}
+	} else {
+		if err := r.Client.Delete(ctx, &helmapi.HelmChart{
+			ObjectMeta: kmetav1.ObjectMeta{
+				Name:      fmt.Sprintf("gw--%s--op", gw.Name),
+				Namespace: gw.Namespace,
+			},
+		}); err != nil && !kapierrors.IsNotFound(err) {
+			return fmt.Errorf("deleting alloy chart: %w", err)
+		}
+	}
+
 	return nil
+}
+
+func FromTemplate(name, tmplText string, data any) (string, error) {
+	tmpl, err := template.New(name).Funcs(sprig.FuncMap()).Option("missingkey=error").Parse(tmplText)
+	if err != nil {
+		return "", fmt.Errorf("parsing template: %w", err)
+	}
+
+	buf := bytes.NewBuffer(nil)
+	err = tmpl.Execute(buf, data)
+	if err != nil {
+		return "", fmt.Errorf("executing template: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+type alloyConfigTemplateConf struct {
+	gwapi.AlloyConfig
+
+	DataplaneMetricsPort uint16
+	FRRMetricsPort       uint16
+	Hostname             string
+	PrometheusEnabled    bool
+	ProxyURL             string
 }

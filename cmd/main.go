@@ -30,6 +30,7 @@ import (
 	"go.githedgehog.com/gateway/pkg/ctrl"
 	"go.githedgehog.com/gateway/pkg/version"
 
+	helmapi "github.com/k3s-io/helm-controller/pkg/apis/helm.cattle.io/v1"
 	gatewayv1alpha1 "go.githedgehog.com/gateway/api/gateway/v1alpha1"
 	gwintv1alpha1 "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	"go.githedgehog.com/gateway/api/meta"
@@ -43,6 +44,7 @@ func init() {
 
 	utilruntime.Must(gatewayv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(gwintv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(helmapi.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

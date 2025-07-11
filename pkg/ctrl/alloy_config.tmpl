@@ -1,0 +1,100 @@
+{{ if .PrometheusEnabled }}
+{{ range $name, $target := .PrometheusTargets }}
+prometheus.remote_write "{{ $name }}" {
+  endpoint {
+    url = "{{ $target.URL }}"
+    {{ if $target.UseControlProxy }}
+    proxy_url = "{{ $.ProxyURL }}"
+    {{ end }}
+    {{ if or $target.BasicAuth.Username $target.BasicAuth.Password }}
+    basic_auth {
+      {{ if $target.BasicAuth.Username }}
+      username = "{{ $target.BasicAuth.Username }}"
+      {{ end }}
+      {{ if $target.BasicAuth.Password }}
+      password = "{{ $target.BasicAuth.Password }}"
+      {{ end }}
+    }
+    {{ else if $target.BearerToken }}
+    bearer_token = "{{ $target.BearerToken }}"
+    {{ end }}
+    tls_config {
+      insecure_skip_verify = {{ $target.InsecureSkipVerify }}
+      {{ if $target.CAPEM }}
+      ca_pem = {{ $target.CAPEM }}
+      {{ end }}
+      {{ if $target.CertPEM }}
+      cert_pem = {{ $target.CertPEM }}
+      {{ end }}
+    }
+    metadata_config {
+      send_interval = "{{ $target.SendIntervalSeconds }}s"
+    }
+  }
+  external_labels = {
+    hostname = "{{ $.Hostname }}",
+    {{ range $key, $value := $target.Labels }}
+    {{ $key }} = "{{ $value }}",
+    {{ end }}
+  }
+}
+{{ end }}
+
+prometheus.scrape "dataplane" {
+  scrape_interval = "{{ .DataplaneScrapeIntervalSeconds }}s"
+  targets = [{
+    __address__ = "127.0.0.1:{{ .DataplaneMetricsPort }}",
+  }]
+  forward_to = [
+  {{ range $name, $target := .PrometheusTargets }}
+    prometheus.remote_write.{{ $name }}.receiver,
+  {{ end }}
+  ]
+}
+
+prometheus.scrape "frr" {
+  scrape_interval = "{{ .FRRScrapeIntervalSeconds }}s"
+  targets = [{
+    __address__ = "127.0.0.1:{{ .FRRMetricsPort }}",
+  }]
+  forward_to = [
+  {{ range $name, $target := .PrometheusTargets }}
+    prometheus.remote_write.{{ $name }}.receiver,
+  {{ end }}
+  ]
+}
+
+prometheus.exporter.self "alloy" {
+}
+
+prometheus.scrape "alloy" {
+  targets = prometheus.exporter.self.alloy.targets
+  forward_to = [
+  {{ range $name, $target := .PrometheusTargets }}
+    prometheus.remote_write.{{ $name }}.receiver,
+  {{ end }}
+  ]
+}
+
+{{ if .UnixExporterEnabled }}
+prometheus.exporter.unix "host" {
+  {{ if .UnixExporterCollectors }}
+  set_collectors = [
+  {{ range .UnixExporterCollectors }}
+    "{{ . }}",
+  {{ end }}
+  ]
+  {{ end }}
+}
+
+prometheus.scrape "unix" {
+  scrape_interval = "{{ .UnixScrapeIntervalSeconds }}s"
+  targets = prometheus.exporter.unix.host.targets
+  forward_to = [
+  {{ range $name, $target := .PrometheusTargets }}
+    prometheus.remote_write.{{ $name }}.receiver,
+  {{ end }}
+  ]
+}
+{{ end }}
+{{ end }}
