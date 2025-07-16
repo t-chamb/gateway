@@ -12,9 +12,15 @@ on:
     tags:
       - "v*"
     paths-ignore:
-      - 'docs/**'
-      - 'README.md'
+      - "docs/**"
+      - "README.md"
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
   schedule:
     - cron: "0 10 * * *" # ~2am PST
   workflow_dispatch:
@@ -26,8 +32,49 @@ on:
         default: false
 
 jobs:
-  test:
+  test-api:
     runs-on: lab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          version: v0.24.0
+          cluster_name: kind
+
+      - name: Install CRDs
+        run: |
+          just --timestamp test-api
+
+      - name: Setup tmate session for debug
+        if: ${{ failure() && github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          limit-access-to-actor: true
+
+  test-build:
+    runs-on: lab
+
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+
+    outputs:
+      version: "${{ steps.version-gen.outputs.version }}"
+      ref: "${{ steps.version-gen.outputs.ref }}"
 
     steps:
       - name: Checkout repository
@@ -54,23 +101,14 @@ jobs:
           # keep in sync with hack/tools.just
           version: v1.64.8
 
-      - name: Build everything
+        # TODO add build-multi when we have a cli
+      - name: Build all
         run: |
           just --timestamp build kube-build
 
       - name: Run tests
         run: |
           just --timestamp test
-
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.12.0
-        with:
-          version: v0.27.0
-          cluster_name: kind
-
-      - name: Install CRDs into Kind
-        run: |
-          just --timestamp test-api
 
       - name: Go mod tidy
         run: |
@@ -80,11 +118,44 @@ jobs:
       # Don't remove it! We shouldn't allow CI to pass if there are any changes not committed after running gen/lint/test
       - name: Fail on dirty
         run: |
-          if ! git status --short || ! git diff --quiet; then
+          if ! git status --short || [ -n "$(git status --porcelain)" ]; then
             git --no-pager diff -- . :^vendor
             echo "::error::Working directory is dirty. Please run 'just gen lint && go mod tidy && go mod vendor' and commit the changes."
             exit 1
           fi
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate temp artifacts version
+        id: version-gen
+        env:
+          commit_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          echo "version=v0-${commit_sha::9}" >> "$GITHUB_OUTPUT"
+          echo "ref=${commit_sha}" >> "$GITHUB_OUTPUT"
+
+        # TODO: Add push-multi when we have a cli
+      - name: Build all and push temp artifacts
+        run: |
+          just --timestamp oci_repo=ghcr.io version="${{ steps.version-gen.outputs.version }}" push
+
+      - name: Comment on PR with temp artifacts version
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Temp artifacts published: `${{ steps.version-gen.outputs.version }}` 🚀'
+            })
 
       - name: Setup tmate session for debug
         if: ${{ failure() && github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
@@ -93,11 +164,72 @@ jobs:
         with:
           limit-access-to-actor: true
 
+  vlab:
+    needs:
+      - test-api
+      - test-build
+
+    name: "${{ matrix.hybrid && 'hlab' || 'vlab' }}-${{ matrix.fabricmode == 'spine-leaf' && 'sl' || 'cc' }}-${{ matrix.gateway && 'gw-' || '' }}${{ matrix.includeonie && 'onie-' || '' }}${{ matrix.buildmode }}-${{ matrix.vpcmode }}"
+
+    uses: githedgehog/fabricator/.github/workflows/run-vlab.yaml@master
+    with:
+      skip: ${{ matrix.hybrid && !contains(github.event.pull_request.labels.*.name, 'ci:+hlab') || !matrix.hybrid && contains(github.event.pull_request.labels.*.name, 'ci:-vlab') }}
+      fabricatorref: master
+      prebuild: "just bump gateway ${{ needs.test-build.outputs.version }} ${{ needs.test-build.outputs.ref }}"
+      fabricmode: ${{ matrix.fabricmode }}
+      gateway: ${{ matrix.gateway }}
+      includeonie: ${{ matrix.includeonie }}
+      buildmode: ${{ matrix.buildmode }}
+      vpcmode: ${{ matrix.vpcmode }}
+      releasetest: ${{ contains(github.event.pull_request.labels.*.name, 'ci:+release') }}
+      hybrid: ${{ matrix.hybrid }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        fabricmode:
+          - spine-leaf
+        gateway:
+          - true
+        includeonie:
+          - false
+        buildmode:
+          - iso
+        vpcmode:
+          - l2vni
+          - l3vni
+        hybrid:
+          - false
+        include:
+          - fabricmode: spine-leaf
+            gateway: true
+            includeonie: false
+            buildmode: iso
+            vpcmode: l2vni
+            hybrid: true
+
+  vlabs:
+    runs-on: ubuntu-latest
+    needs:
+      - vlab
+    if: ${{ always() }}
+
+    steps:
+      - run: |
+          result="${{ needs.vlab.result }}"
+          if [[ $result == "success" || $result == "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi
+
   publish-release:
     runs-on: lab
     if: startsWith(github.event.ref, 'refs/tags/v') && github.event_name == 'push'
     needs:
-      - test
+      - test-api
+      - test-build
+      - vlabs
 
     steps:
       - name: Checkout repository
@@ -255,42 +387,6 @@ jobs:
 
             It should be merged only after gateway in the fabricator repository
             master branch updated to the ${{ github.ref_name }}: ${{ steps.fab-pr.outputs.pull-request-url }}.
-
-      - name: Setup tmate session for debug
-        if: ${{ failure() && github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        with:
-          limit-access-to-actor: true
-
-  publish-master:
-    runs-on: lab
-    if: github.event.ref == 'refs/heads/master' && github.event_name == 'push'
-    needs:
-      - test
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: true
-
-      - name: Login to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish Images, Helm charts and Bins for master
-        run: |
-          just --timestamp oci_repo=ghcr.io version_extra=-master push
 
       - name: Setup tmate session for debug
         if: ${{ failure() && github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
