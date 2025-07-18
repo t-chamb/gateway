@@ -31,6 +31,9 @@ on:
         required: false
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   test-api:
     runs-on: lab
@@ -223,13 +226,17 @@ jobs:
             exit 1
           fi
 
-  publish-release:
+  publish:
     runs-on: lab
     if: startsWith(github.event.ref, 'refs/tags/v') && github.event_name == 'push'
     needs:
       - test-api
       - test-build
       - vlabs
+
+    permissions:
+      contents: write # to be able to create a GH release
+      packages: write
 
     steps:
       - name: Checkout repository

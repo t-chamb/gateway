@@ -3,6 +3,16 @@ name: GHCR Cleanup
 on:
   schedule:
     - cron: "0 10 * * *" # ~2am PST
+  workflow_dispatch:
+    inputs:
+      keep-younger-than:
+        description: "Keep images younger than (days)"
+        required: true
+        default: "30"
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   ghcr-cleanup:
@@ -12,23 +22,22 @@ jobs:
       matrix:
         package:
           - gateway/gateway
+          - gateway/gateway-agent
           - gateway/charts/gateway-api
           - gateway/charts/gateway
 
     steps:
-      - name: ghcp-prune
+      - name: ghcr-prune
         uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           organization: githedgehog
           container: ${{ matrix.package }}
-          keep-younger-than: 14 # days
-          keep-last: 5
+          keep-younger-than: ${{ inputs.keep-younger-than || '30' }} # days
           prune-tags-regexes: |
+            ^v0-
             ^master-
             ^pr-
-            -master$
-            -pr$
-            -master-
-            -pr-
-            -dirty-
+            -master
+            -pr
+            -dirty
