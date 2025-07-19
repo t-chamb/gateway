@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	kctrl "sigs.k8s.io/controller-runtime"
@@ -174,6 +175,13 @@ func (svc *Service) watchAgent(ctx context.Context) error {
 				}
 
 				svc.curr = ag
+
+				ag.Status.LastAppliedGen = ag.Generation
+				ag.Status.LastAppliedTime = kmetav1.Now()
+
+				if err := svc.kube.Status().Update(ctx, ag); err != nil {
+					return fmt.Errorf("updating agent status: %w", err)
+				}
 			case watch.Deleted:
 				slog.Warn("Agent object deleted, shutting down")
 
@@ -202,6 +210,15 @@ func (svc *Service) watchAgent(ctx context.Context) error {
 				}
 
 				return fmt.Errorf("enforcing config: %w", err)
+			}
+
+			if svc.curr.Status.LastAppliedGen != svc.curr.Generation {
+				svc.curr.Status.LastAppliedGen = svc.curr.Generation
+				svc.curr.Status.LastAppliedTime = kmetav1.Now()
+
+				if err := svc.kube.Status().Update(ctx, svc.curr); err != nil {
+					return fmt.Errorf("updating agent status (enforcer): %w", err)
+				}
 			}
 		}
 	}

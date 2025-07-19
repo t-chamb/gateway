@@ -215,6 +215,15 @@ spec:
             type: object
           status:
             description: GatewayAgentStatus defines the observed state of GatewayAgent.
+            properties:
+              lastAppliedGen:
+                description: Generation of the last successful configuration application
+                format: int64
+                type: integer
+              lastAppliedTime:
+                description: Time of the last successful configuration application
+                format: date-time
+                type: string
             type: object
         type: object
     served: true
