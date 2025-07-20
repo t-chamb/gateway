@@ -10,10 +10,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	"go.githedgehog.com/gateway/pkg/agent"
 	"go.githedgehog.com/gateway/pkg/version"
+	"k8s.io/klog/v2"
+	kctrl "sigs.k8s.io/controller-runtime"
 )
 
 func main() {
@@ -28,12 +31,20 @@ func Run(ctx context.Context) error {
 	logLevel := slog.LevelDebug
 
 	logW := os.Stderr
-	logger := slog.New(tint.NewHandler(logW, &tint.Options{
+
+	slog.SetDefault(slog.New(tint.NewHandler(logW, &tint.Options{
 		Level:      logLevel,
-		TimeFormat: time.TimeOnly,
+		TimeFormat: time.StampMilli,
 		NoColor:    !isatty.IsTerminal(logW.Fd()),
-	}))
-	slog.SetDefault(logger)
+	})))
+
+	kubeHandler := tint.NewHandler(logW, &tint.Options{
+		Level:      slog.LevelInfo,
+		TimeFormat: time.StampMilli,
+		NoColor:    !isatty.IsTerminal(logW.Fd()),
+	})
+	kctrl.SetLogger(logr.FromSlogHandler(kubeHandler))
+	klog.SetSlogLogger(slog.New(kubeHandler))
 
 	args := []any{
 		"version", version.Version,
