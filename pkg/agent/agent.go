@@ -159,6 +159,7 @@ func (svc *Service) watchAgent(ctx context.Context) error {
 
 					continue
 				}
+				svc.curr = ag
 
 				if err := svc.enforceDataplaneConfig(ctx, ag); err != nil {
 					if status, ok := status.FromError(errors.Unwrap(err)); ok {
@@ -173,8 +174,6 @@ func (svc *Service) watchAgent(ctx context.Context) error {
 
 					return fmt.Errorf("handling agent: %w", err)
 				}
-
-				svc.curr = ag
 
 				ag.Status.LastAppliedGen = ag.Generation
 				ag.Status.LastAppliedTime = kmetav1.Now()
