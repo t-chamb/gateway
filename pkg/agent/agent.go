@@ -15,6 +15,7 @@ import (
 	"go.githedgehog.com/gateway-proto/pkg/protoyaml"
 	gwintapi "go.githedgehog.com/gateway/api/gwint/v1alpha1"
 	"go.githedgehog.com/gateway/api/meta"
+	"go.githedgehog.com/gateway/pkg/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -175,6 +176,7 @@ func (svc *Service) watchAgent(ctx context.Context) error {
 					return fmt.Errorf("handling agent: %w", err)
 				}
 
+				ag.Status.AgentVersion = version.Version
 				ag.Status.LastAppliedGen = ag.Generation
 				ag.Status.LastAppliedTime = kmetav1.Now()
 
@@ -211,7 +213,8 @@ func (svc *Service) watchAgent(ctx context.Context) error {
 				return fmt.Errorf("enforcing config: %w", err)
 			}
 
-			if svc.curr.Status.LastAppliedGen != svc.curr.Generation {
+			if svc.curr.Status.LastAppliedGen != svc.curr.Generation || svc.curr.Status.AgentVersion != version.Version {
+				svc.curr.Status.AgentVersion = version.Version
 				svc.curr.Status.LastAppliedGen = svc.curr.Generation
 				svc.curr.Status.LastAppliedTime = kmetav1.Now()
 

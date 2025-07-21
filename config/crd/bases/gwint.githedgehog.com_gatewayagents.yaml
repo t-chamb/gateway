@@ -44,9 +44,9 @@ spec:
           spec:
             description: GatewayAgentSpec defines the desired state of GatewayAgent.
             properties:
-              ctrlVersion:
-                description: CtrlVersion is the version of the gateway controller
-                  to trigger generation changes on controler upgrade
+              agentVersion:
+                description: AgentVersion is the desired version of the gateway agent
+                  to trigger generation changes on controller upgrades
                 type: string
               gateway:
                 description: GatewaySpec defines the desired state of Gateway.
@@ -216,6 +216,9 @@ spec:
           status:
             description: GatewayAgentStatus defines the observed state of GatewayAgent.
             properties:
+              agentVersion:
+                description: AgentVersion is the version of the gateway agent
+                type: string
               lastAppliedGen:
                 description: Generation of the last successful configuration application
                 format: int64

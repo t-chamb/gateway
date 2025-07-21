@@ -204,7 +204,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req kctrl.Request) (k
 			return fmt.Errorf("setting controller reference: %w", err)
 		}
 
-		gwAg.Spec.CtrlVersion = version.Version
+		gwAg.Spec.AgentVersion = version.Version
 		gwAg.Spec.Gateway = gw.Spec
 		gwAg.Spec.VPCs = vpcs
 		gwAg.Spec.Peerings = peerings
