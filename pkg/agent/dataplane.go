@@ -138,24 +138,6 @@ func buildDataplaneConfig(ag *gwintapi.GatewayAgent) (*dataplane.GatewayConfig, 
 					}
 				}
 
-				// TODO remove it after dataplane is fixed to properly handle empty AS (related to removing import vrf and it not working w/o NAT)
-				if len(as) == 0 {
-					for _, ipEntry := range ips {
-						switch {
-						case ipEntry.GetCidr() != "":
-							as = append(as, &dataplane.PeeringAs{
-								Rule: &dataplane.PeeringAs_Cidr{Cidr: ipEntry.GetCidr()},
-							})
-						case ipEntry.GetNot() != "":
-							as = append(as, &dataplane.PeeringAs{
-								Rule: &dataplane.PeeringAs_Not{Not: ipEntry.GetNot()},
-							})
-						default:
-							return nil, fmt.Errorf("invalid IP entry in peering %s / vpc %s: %v", peeringName, vpcName, ipEntry) //nolint:goerr113
-						}
-					}
-				}
-
 				exposes = append(exposes, &dataplane.Expose{
 					Ips: ips,
 					As:  as,
